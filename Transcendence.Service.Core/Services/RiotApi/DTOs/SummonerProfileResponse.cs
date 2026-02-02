@@ -24,6 +24,12 @@ public class SummonerProfileResponse
     // Data freshness
     public DataAgeMetadata ProfileAge { get; set; } = new();
     public DataAgeMetadata RankAge { get; set; } = new();
+
+    /// <summary>
+    /// Data freshness for stats (based on most recent match).
+    /// Null if no match data available.
+    /// </summary>
+    public DataAgeMetadata? StatsAge { get; set; }
 }
 
 public class RankInfo
