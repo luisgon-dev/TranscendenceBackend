@@ -27,6 +27,23 @@ builder.Services.AddHangfireServer();
 
 builder.Services.AddHttpClient();
 
+// Configure Redis distributed cache
+builder.Services.AddStackExchangeRedisCache(options =>
+{
+    options.Configuration = builder.Configuration.GetConnectionString("Redis");
+    options.InstanceName = "Transcendence_";
+});
+
+// Configure HybridCache with L1/L2 TTL relationship
+builder.Services.AddHybridCache(options =>
+{
+    options.DefaultEntryOptions = new Microsoft.Extensions.Caching.Hybrid.HybridCacheEntryOptions
+    {
+        Expiration = TimeSpan.FromHours(1),           // L2 Redis TTL
+        LocalCacheExpiration = TimeSpan.FromMinutes(5) // L1 Memory TTL (shorter than L2)
+    };
+});
+
 // worker that initiates services
 if (builder.Environment.IsDevelopment())
     // development worker directly enqueues and cleans up jobs for development
