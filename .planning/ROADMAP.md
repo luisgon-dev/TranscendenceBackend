@@ -32,10 +32,10 @@ This roadmap delivers a production-grade League of Legends analytics API across 
 **Plans:** 4 plans
 
 Plans:
-- [ ] 01-01-PLAN.md — HybridCache + Redis setup with stampede protection
-- [ ] 01-02-PLAN.md — Patch detection with cache invalidation and scheduled refresh
-- [ ] 01-03-PLAN.md — Retry logic with exponential backoff and retention window checks
-- [ ] 01-04-PLAN.md — Data freshness metadata in API responses
+- [x] 01-01-PLAN.md — HybridCache + Redis setup with stampede protection
+- [x] 01-02-PLAN.md — Patch detection with cache invalidation and scheduled refresh
+- [x] 01-03-PLAN.md — Retry logic with exponential backoff and retention window checks
+- [x] 01-04-PLAN.md — Data freshness metadata in API responses
 
 ---
 
@@ -160,13 +160,13 @@ Plans:
 
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
-| 1 - Foundation | Planned | INFRA-01, INFRA-02 | 0% |
+| 1 - Foundation | ✓ Complete | INFRA-01, INFRA-02 | 100% |
 | 2 - Summoner Profiles | Pending | PROF-01, PROF-02, PROF-03, PROF-04 | 0% |
 | 3 - Champion Analytics | Pending | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 0% |
 | 4 - Live Game & Auth | Pending | LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03 | 0% |
 | 5 - Management | Pending | MGMT-01, MGMT-02, MGMT-03, MGMT-04 | 0% |
 
-**Overall:** 0% (0/21 requirements complete)
+**Overall:** 10% (2/21 requirements complete)
 
 ## Coverage
 
@@ -194,4 +194,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-01*
+*Last updated: 2026-02-02*
