@@ -63,10 +63,10 @@ Plans:
 **Plans:** 4 plans in 2 waves
 
 Plans:
-- [ ] 02-01-PLAN.md — Full match details endpoint with items/runes/spells (Wave 1)
-- [ ] 02-02-PLAN.md — Complete profile response in single API call (Wave 1)
-- [ ] 02-03-PLAN.md — HybridCache for stats queries (Wave 2)
-- [ ] 02-04-PLAN.md — Match history with loadout data (Wave 2)
+- [x] 02-01-PLAN.md — Full match details endpoint with items/runes/spells (Wave 1)
+- [x] 02-02-PLAN.md — Complete profile response in single API call (Wave 1)
+- [x] 02-03-PLAN.md — HybridCache for stats queries (Wave 2)
+- [x] 02-04-PLAN.md — Match history with loadout data (Wave 2)
 
 ---
 
@@ -164,12 +164,12 @@ Plans:
 | Phase | Status | Requirements | Completion |
 |-------|--------|--------------|------------|
 | 1 - Foundation | ✓ Complete | INFRA-01, INFRA-02 | 100% |
-| 2 - Summoner Profiles | Pending | PROF-01, PROF-02, PROF-03, PROF-04 | 0% |
+| 2 - Summoner Profiles | ✓ Complete | PROF-01, PROF-02, PROF-03, PROF-04 | 100% |
 | 3 - Champion Analytics | Pending | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 0% |
 | 4 - Live Game & Auth | Pending | LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03 | 0% |
 | 5 - Management | Pending | MGMT-01, MGMT-02, MGMT-03, MGMT-04 | 0% |
 
-**Overall:** 10% (2/21 requirements complete)
+**Overall:** 29% (6/21 requirements complete)
 
 ## Coverage
 

@@ -6,28 +6,28 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 
 **Core value:** Summoner profiles with comprehensive stats — the foundation that enables the desktop app to be built against this API
 
-**Current focus:** Phase 2 - Summoner Profiles (Complete Profile API)
+**Current focus:** Phase 3 - Champion Analytics (Meta Insights & Recommendations)
 
 ## Current Position
 
-Phase: 2 of 5 - Summoner Profiles
-Plan: 04 complete
-Status: Ready for next phase or plan
-Last activity: 2026-02-02 - Plan 02-04 complete (Match History Loadout)
+Phase: 3 of 5 - Champion Analytics
+Plan: None (phase not yet planned)
+Status: Ready for Phase 3 planning
+Last activity: 2026-02-02 - Phase 2 complete (verified)
 
-Progress: ██░░░░░░░░ 20% (1/5 phases complete)
+Progress: ████░░░░░░ 40% (2/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 2 (INFRA-01, INFRA-02)
-- Requirements remaining: 19
+- Requirements complete: 6 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04)
+- Requirements remaining: 15
 
 **Phases:**
 - Total phases: 5
-- Phases complete: 1
-- Current phase: Phase 2
+- Phases complete: 2
+- Current phase: Phase 3
 
 **Velocity:**
 - Plan 02-01: 15 minutes (3 tasks)
@@ -90,27 +90,22 @@ Progress: ██░░░░░░░░ 20% (1/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Plan 02-04 (Match History Loadout) with 3 tasks:
-  - Task 1 already complete (RecentMatchSummary + MatchRuneSummary records)
-  - Restructured ComputeRecentMatchesAsync for batched item/rune fetching
-  - Updated controller DTOs and mapping to expose loadout data
+- Completed Phase 2 (Summoner Profiles) with 4 plans:
+  - 02-01: Full match details endpoint with items/runes/spells
+  - 02-02: Complete profile response in single API call with parallel fetching
+  - 02-03: HybridCache for all stats queries (sub-500ms performance)
+  - 02-04: Match history with loadout data (items, runes, spells)
 
-**Key artifacts:**
-- `Transcendence.Service.Core/Services/Analysis/Implementations/SummonerStatsService.cs` - Batched queries for items/runes
-- `Transcendence.WebAPI/Models/Stats/SummonerStatsDtos.cs` - RecentMatchSummaryDto with loadout
-- `Transcendence.WebAPI/Controllers/SummonerStatsController.cs` - Mapping updated
+**Phase 2 deliverables:**
+- Profile endpoint: `/api/summoners/{region}/{name}/{tag}` returns complete profile
+- Match detail endpoint: `/api/summoners/{id}/matches/{matchId}` returns full loadout
+- Match history: `/api/summoners/{id}/matches/recent` with items/runes/spells
+- Stats cached with HybridCache (5min TTL), invalidated on refresh
+- All verification criteria passed (15/15 must-haves)
 
-**Match history endpoint now returns:**
-- Items array (7 slots: 6 items + trinket, 0 for empty)
-- Rune summary (primary/sub style IDs, keystone ID)
-- Summoner spell IDs (Spell1Id, Spell2Id)
+**Verification report:** `.planning/phases/02-summoner-profiles/02-VERIFICATION.md`
 
-**Query performance:**
-- 3 batched queries (participants, items, runes) prevents N+1
-- RuneVersion metadata fetched separately for efficient style inference
-- Same pattern as match detail endpoint (consistent architecture)
-
-**Ready for:** Phase 3 (Static Data Service) to add champion/item/rune name resolution
+**Ready for:** Phase 3 planning - Champion Analytics (win rates, builds, tier lists, matchups)
 
 ---
 
