@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 1 of 5 - Foundation
-Plan: 3 of 4 in current phase
-Status: In progress
-Last activity: 2026-02-02 - Completed 01-03-PLAN.md
+Plan: 4 of 4 in current phase
+Status: Phase complete
+Last activity: 2026-02-02 - Completed 01-04-PLAN.md
 
-Progress: ███░░░░░░░ 75% (3/4 plans in phase)
+Progress: ████░░░░░░ 100% (4/4 plans in phase)
 
 ## Performance Metrics
 
@@ -49,6 +49,10 @@ Progress: ███░░░░░░░ 75% (3/4 plans in phase)
 | 01 | Global query filter for PermanentlyUnfetchable | Unfetchable matches are historical records but shouldn't appear in normal queries - use IgnoreQueryFilters() for admin/reporting |
 | 01 | Trust Camille SDK rate limiting | Camille parses X-Rate-Limit-* headers and respects Retry-After - custom throttling creates double-throttling |
 | 01 | RetryFailedMatchesJob hourly as safety net | Catches edge cases from service restarts - primary retry is per-match exponential backoff |
+| 01 | Separate ProfileAge and RankAge metadata | Profile data changes rarely, rank data changes frequently - different freshness expectations |
+| 01 | Human-friendly age descriptions | Just now (<5 min), X minutes ago (<1 hr), X hours ago (<1 day), X days ago (>1 day) for UI display |
+| 01 | UpdatedAt on Summoner entity | Added for ProfileAge tracking - was missing but required by plan |
+| 01 | API contract change to SummonerProfileResponse | Acceptable in Phase 1 Foundation - no existing clients to break, desktop app will be built against this contract |
 
 ## Pending Todos
 
@@ -62,7 +66,7 @@ Progress: ███░░░░░░░ 75% (3/4 plans in phase)
 
 **Last session:** 2026-02-02
 **Activity:** Plan execution
-**Stopped at:** Completed 01-03-PLAN.md
+**Stopped at:** Completed 01-04-PLAN.md (Phase 1 complete)
 **Resume file:** None
 
 ---
