@@ -2,12 +2,16 @@ using System.Text.Json;
 using Microsoft.EntityFrameworkCore;
 using Transcendence.Data;
 using Transcendence.Data.Models.LoL.Static;
+using Transcendence.Service.Core.Services.Cache;
 using Transcendence.Service.Core.Services.StaticData.DTOs;
 using Transcendence.Service.Core.Services.StaticData.Interfaces;
 
 namespace Transcendence.Service.Core.Services.StaticData.Implementations;
 
-public class StaticDataService(TranscendenceContext context, IHttpClientFactory httpClientFactory)
+public class StaticDataService(
+    TranscendenceContext context,
+    IHttpClientFactory httpClientFactory,
+    ICacheService cacheService)
     : IStaticDataService
 {
     public async Task UpdateStaticDataAsync(CancellationToken cancellationToken = default)
@@ -24,43 +28,123 @@ public class StaticDataService(TranscendenceContext context, IHttpClientFactory 
         await EnsureStaticDataForPatchAsync(latestCdragonPatch, cancellationToken);
     }
 
-    public async Task EnsureStaticDataForPatchAsync(string patchVersion, CancellationToken cancellationToken = default)
+    public async Task DetectAndRefreshAsync(CancellationToken cancellationToken = default)
     {
         var client = httpClientFactory.CreateClient();
+        var patches = await FetchPatchesAsync(client, cancellationToken);
+        if (patches is null || patches.Count == 0) return;
 
+        var latestFullPatch = patches[0].Patch;
+        var latestCdragonPatch = TrimPatch(latestFullPatch);
+
+        // Check if this is a new patch
+        var currentPatch = await context.Patches
+            .FirstOrDefaultAsync(p => p.IsActive, cancellationToken);
+
+        if (currentPatch == null || currentPatch.Version != latestCdragonPatch)
+        {
+            // New patch detected
+            if (currentPatch != null)
+            {
+                currentPatch.IsActive = false;
+            }
+
+            var newPatch = new Patch
+            {
+                Version = latestCdragonPatch,
+                ReleaseDate = DateTime.UtcNow,
+                DetectedAt = DateTime.UtcNow,
+                IsActive = true
+            };
+
+            context.Patches.Add(newPatch);
+            await context.SaveChangesAsync(cancellationToken);
+
+            // Invalidate all patch-dependent cache
+            if (currentPatch != null)
+            {
+                await cacheService.RemoveByTagAsync($"patch-{currentPatch.Version}", cancellationToken);
+            }
+
+            // Fetch fresh static data
+            await EnsureStaticDataForPatchAsync(latestCdragonPatch, cancellationToken);
+        }
+    }
+
+    public async Task EnsureStaticDataForPatchAsync(string patchVersion, CancellationToken cancellationToken = default)
+    {
         // Ensure Patch row exists
         if (!await context.Patches.AnyAsync(p => p.Version == patchVersion, cancellationToken))
+        {
             context.Patches.Add(new Patch
             {
                 Version = patchVersion,
-                ReleaseDate = DateTime.UtcNow
+                ReleaseDate = DateTime.UtcNow,
+                DetectedAt = DateTime.UtcNow,
+                IsActive = false  // Will be set true by DetectAndRefreshAsync if this is the latest
             });
+            await context.SaveChangesAsync(cancellationToken);
+        }
 
-        // Runes for this patch
+        // Use cache for runes
+        await cacheService.GetOrCreateAsync(
+            $"static:runes:{patchVersion}",
+            async ct => await FetchAndStoreRunesAsync(patchVersion, ct),
+            expiration: TimeSpan.FromDays(30),
+            localExpiration: TimeSpan.FromMinutes(5),
+            tags: new[] { $"patch-{patchVersion}" },
+            cancellationToken: cancellationToken);
+
+        // Use cache for items
+        await cacheService.GetOrCreateAsync(
+            $"static:items:{patchVersion}",
+            async ct => await FetchAndStoreItemsAsync(patchVersion, ct),
+            expiration: TimeSpan.FromDays(30),
+            localExpiration: TimeSpan.FromMinutes(5),
+            tags: new[] { $"patch-{patchVersion}" },
+            cancellationToken: cancellationToken);
+    }
+
+    private async Task<bool> FetchAndStoreRunesAsync(string patchVersion, CancellationToken cancellationToken)
+    {
+        // Check if already in database
         var existingRuneIds = await context.RuneVersions
             .Where(rv => rv.PatchVersion == patchVersion)
             .Select(rv => rv.RuneId)
             .ToListAsync(cancellationToken);
 
-        if (existingRuneIds.Count == 0)
+        if (existingRuneIds.Count > 0)
         {
-            var runes = await FetchRunesForPatchAsync(client, patchVersion, cancellationToken);
-            await context.RuneVersions.AddRangeAsync(runes, cancellationToken);
+            return true;  // Already stored
         }
 
-        // Items for this patch
+        // Fetch from API
+        var client = httpClientFactory.CreateClient();
+        var runes = await FetchRunesForPatchAsync(client, patchVersion, cancellationToken);
+        await context.RuneVersions.AddRangeAsync(runes, cancellationToken);
+        await context.SaveChangesAsync(cancellationToken);
+        return true;
+    }
+
+    private async Task<bool> FetchAndStoreItemsAsync(string patchVersion, CancellationToken cancellationToken)
+    {
+        // Check if already in database
         var existingItemIds = await context.ItemVersions
             .Where(iv => iv.PatchVersion == patchVersion)
             .Select(iv => iv.ItemId)
             .ToListAsync(cancellationToken);
 
-        if (existingItemIds.Count == 0)
+        if (existingItemIds.Count > 0)
         {
-            var items = await FetchItemsForPatchAsync(client, patchVersion, cancellationToken);
-            await context.ItemVersions.AddRangeAsync(items, cancellationToken);
+            return true;  // Already stored
         }
 
+        // Fetch from API
+        var client = httpClientFactory.CreateClient();
+        var items = await FetchItemsForPatchAsync(client, patchVersion, cancellationToken);
+        await context.ItemVersions.AddRangeAsync(items, cancellationToken);
         await context.SaveChangesAsync(cancellationToken);
+        return true;
     }
 
     private static string TrimPatch(string patch)
