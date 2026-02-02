@@ -15,6 +15,12 @@ public class ProductionWorker(
             x => x.Execute(CancellationToken.None),
             "0 */6 * * *"); // Every 6 hours at minute 0
 
+        // Schedule retry job every hour
+        recurringJobManager.AddOrUpdate<RetryFailedMatchesJob>(
+            "retry-failed-matches",
+            job => job.Execute(CancellationToken.None),
+            Cron.Hourly);
+
         return base.StartAsync(cancellationToken);
     }
 
