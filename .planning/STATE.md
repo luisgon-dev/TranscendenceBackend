@@ -11,11 +11,11 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 1 of 5 - Foundation
-Plan: 2 of 4 in current phase
+Plan: 3 of 4 in current phase
 Status: In progress
-Last activity: 2026-02-02 - Completed 01-02-PLAN.md
+Last activity: 2026-02-02 - Completed 01-03-PLAN.md
 
-Progress: ██░░░░░░░░ 50% (2/4 plans in phase)
+Progress: ███░░░░░░░ 75% (3/4 plans in phase)
 
 ## Performance Metrics
 
@@ -43,6 +43,12 @@ Progress: ██░░░░░░░░ 50% (2/4 plans in phase)
 | 01 | 30-day cache TTL for static data | Outlives 2-week patch cycle, old patch data persists for historical queries |
 | 01 | IsActive flag for current patch | Simplifies queries to FirstOrDefault(p => p.IsActive) instead of ordering by ReleaseDate |
 | 01 | Tag-based cache invalidation | Cache entries tagged with patch version allow bulk invalidation on patch change |
+| 01 | Exponential backoff delays: 30s, 60s, 120s, 300s | Balances responsiveness with API courtesy - first retry quick for transient failures, backs off if issue persists |
+| 01 | Max 5 retry attempts before PermanentlyUnfetchable | Prevents infinite retry loops while being persistent - after ~10 minutes data likely permanently unavailable |
+| 01 | 2-year retention window check before fetch | Riot API only retains match data for 2 years - checking before fetch prevents wasted API calls |
+| 01 | Global query filter for PermanentlyUnfetchable | Unfetchable matches are historical records but shouldn't appear in normal queries - use IgnoreQueryFilters() for admin/reporting |
+| 01 | Trust Camille SDK rate limiting | Camille parses X-Rate-Limit-* headers and respects Retry-After - custom throttling creates double-throttling |
+| 01 | RetryFailedMatchesJob hourly as safety net | Catches edge cases from service restarts - primary retry is per-match exponential backoff |
 
 ## Pending Todos
 
@@ -56,7 +62,7 @@ Progress: ██░░░░░░░░ 50% (2/4 plans in phase)
 
 **Last session:** 2026-02-02
 **Activity:** Plan execution
-**Stopped at:** Completed 01-02-PLAN.md
+**Stopped at:** Completed 01-03-PLAN.md
 **Resume file:** None
 
 ---
