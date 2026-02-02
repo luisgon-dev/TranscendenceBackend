@@ -1,4 +1,5 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Caching.Hybrid;
 using Transcendence.Data;
 using Transcendence.Service.Core.Services.Analysis.Interfaces;
 using Transcendence.Service.Core.Services.Analysis.Models;
@@ -6,8 +7,29 @@ using Transcendence.Service.Core.Services.RiotApi.DTOs;
 
 namespace Transcendence.Service.Core.Services.Analysis.Implementations;
 
-public class SummonerStatsService(TranscendenceContext db) : ISummonerStatsService
+public class SummonerStatsService(TranscendenceContext db, HybridCache cache) : ISummonerStatsService
 {
+    // Cache key prefixes
+    private const string OverviewCacheKeyPrefix = "stats:overview:";
+    private const string ChampionsCacheKeyPrefix = "stats:champions:";
+    private const string RolesCacheKeyPrefix = "stats:roles:";
+    private const string RecentMatchesCacheKeyPrefix = "stats:recent:";
+    private const string MatchDetailCacheKeyPrefix = "match:detail:";
+
+    // Stats cache options: 5min total, 2min L1 (stats change on refresh)
+    private static readonly HybridCacheEntryOptions StatsCacheOptions = new()
+    {
+        Expiration = TimeSpan.FromMinutes(5),
+        LocalCacheExpiration = TimeSpan.FromMinutes(2)
+    };
+
+    // Match detail cache options: 1hr total, 15min L1 (match data is immutable)
+    private static readonly HybridCacheEntryOptions MatchDetailCacheOptions = new()
+    {
+        Expiration = TimeSpan.FromHours(1),
+        LocalCacheExpiration = TimeSpan.FromMinutes(15)
+    };
+
     public async Task<SummonerOverviewStats> GetSummonerOverviewAsync(Guid summonerId, int recentGamesCount,
         CancellationToken ct)
     {
