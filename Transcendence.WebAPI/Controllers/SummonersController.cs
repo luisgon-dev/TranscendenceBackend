@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using Transcendence.Data.Models.LoL.Account;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Jobs.Interfaces;
+using Transcendence.Service.Core.Services.RiotApi.DTOs;
 
 namespace Transcendence.WebAPI.Controllers;
 
@@ -27,7 +28,7 @@ public class SummonersController(
     /// <param name="name">Riot game name (without #tag)</param>
     /// <param name="tag">Riot tag (without #)</param>
     [HttpGet("{region}/{name}/{tag}")]
-    [ProducesResponseType(typeof(Summoner), StatusCodes.Status200OK)]
+    [ProducesResponseType(typeof(SummonerProfileResponse), StatusCodes.Status200OK)]
     [ProducesResponseType(StatusCodes.Status400BadRequest)]
     [ProducesResponseType(StatusCodes.Status202Accepted)]
     public async Task<IActionResult> GetByRiotId([FromRoute] string region, [FromRoute] string name,
@@ -39,7 +40,51 @@ public class SummonersController(
         var platformRegion = platform.ToString();
         var summoner = await summonerRepository.FindByRiotIdAsync(platformRegion, name, tag,
             q => q.Include(s => s.Ranks).Include(s => s.HistoricalRanks), ct);
-        if (summoner != null) return Ok(summoner);
+        if (summoner != null)
+        {
+            // Map to response DTO with data age metadata
+            var soloRank = summoner.Ranks.FirstOrDefault(r => r.QueueType == "RANKED_SOLO_5x5");
+            var flexRank = summoner.Ranks.FirstOrDefault(r => r.QueueType == "RANKED_FLEX_SR");
+
+            var response = new SummonerProfileResponse
+            {
+                Puuid = summoner.Puuid ?? string.Empty,
+                GameName = summoner.GameName ?? string.Empty,
+                TagLine = summoner.TagLine ?? string.Empty,
+                SummonerLevel = (int)summoner.SummonerLevel,
+                ProfileIconId = summoner.ProfileIconId,
+
+                SoloRank = soloRank != null ? new RankInfo
+                {
+                    Tier = soloRank.Tier,
+                    Division = soloRank.RankNumber,
+                    LeaguePoints = soloRank.LeaguePoints,
+                    Wins = soloRank.Wins,
+                    Losses = soloRank.Losses
+                } : null,
+
+                FlexRank = flexRank != null ? new RankInfo
+                {
+                    Tier = flexRank.Tier,
+                    Division = flexRank.RankNumber,
+                    LeaguePoints = flexRank.LeaguePoints,
+                    Wins = flexRank.Wins,
+                    Losses = flexRank.Losses
+                } : null,
+
+                ProfileAge = new DataAgeMetadata
+                {
+                    FetchedAt = summoner.UpdatedAt
+                },
+
+                RankAge = new DataAgeMetadata
+                {
+                    FetchedAt = soloRank?.UpdatedAt ?? flexRank?.UpdatedAt ?? DateTime.UtcNow
+                }
+            };
+
+            return Ok(response);
+        }
 
         // If a refresh is in progress, let the caller know
         var refreshKey = BuildRefreshKey(platform, name, tag);
