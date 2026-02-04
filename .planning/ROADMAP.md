@@ -91,10 +91,14 @@ Plans:
 
 **Directory:** `.planning/phases/03-champion-analytics/`
 
-**Plans:** 0 plans
+**Plans:** 5 plans in 3 waves
 
 Plans:
-- [ ] TBD (use `/gsd:plan-phase 3` to create)
+- [ ] 03-01-PLAN.md — Analytics foundation + win rates by role/tier (Wave 1)
+- [ ] 03-02-PLAN.md — Tier lists with S/A/B/C/D grades and movement indicators (Wave 2)
+- [ ] 03-03-PLAN.md — Build recommendations with core/situational items (Wave 2)
+- [ ] 03-04-PLAN.md — Matchup data (counters and synergies) (Wave 2)
+- [ ] 03-05-PLAN.md — Daily refresh job with cache pre-warming (Wave 3)
 
 ---
 
@@ -165,7 +169,7 @@ Plans:
 |-------|--------|--------------|------------|
 | 1 - Foundation | ✓ Complete | INFRA-01, INFRA-02 | 100% |
 | 2 - Summoner Profiles | ✓ Complete | PROF-01, PROF-02, PROF-03, PROF-04 | 100% |
-| 3 - Champion Analytics | Pending | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 0% |
+| 3 - Champion Analytics | In Progress | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 0% |
 | 4 - Live Game & Auth | Pending | LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03 | 0% |
 | 5 - Management | Pending | MGMT-01, MGMT-02, MGMT-03, MGMT-04 | 0% |
 
@@ -197,4 +201,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-04*
