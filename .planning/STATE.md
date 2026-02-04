@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 3 of 5 - Champion Analytics
-Plan: None (phase not yet planned)
-Status: Ready for Phase 3 planning
-Last activity: 2026-02-02 - Phase 2 complete (verified)
+Plan: 1 of 5 (Champion Analytics Foundation)
+Status: In progress
+Last activity: 2026-02-04 - Completed 03-01-PLAN.md
 
-Progress: ████░░░░░░ 40% (2/5 phases complete)
+Progress: ████▓░░░░░ 42% (2.2/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 6 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04)
-- Requirements remaining: 15
+- Requirements complete: 7 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01)
+- Requirements remaining: 14
 
 **Phases:**
 - Total phases: 5
@@ -34,11 +34,17 @@ Progress: ████░░░░░░ 40% (2/5 phases complete)
 - Plan 02-02: 20 minutes (3 tasks)
 - Plan 02-03: 15 minutes (3 tasks)
 - Plan 02-04: 4 minutes (3 tasks, Task 1 pre-complete)
+- Plan 03-01: 8 minutes (3 tasks)
 
 ## Recent Decisions
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 03-01 | 24hr L2 / 1hr L1 cache TTL for analytics | Longer than stats cache (5min) due to large dataset computation cost across thousands of matches |
+| 03-01 | 100-game minimum threshold for win rates | Ensures statistical significance, prevents misleading data from small samples (from 03-RESEARCH user decision) |
+| 03-01 | Two-tier analytics architecture | Compute service for raw EF queries, cached service wraps with HybridCache - clean separation, testability |
+| 03-01 | Current patch only, no fallback | Keeps implementation simple, historical analytics can be added later if needed |
+| 03-01 | Rank tier from RANKED_SOLO_5x5 queue | Solo queue is primary competitive mode for analytics |
 | 02-04 | Items padded to 7 slots with 0s | MatchParticipantItem lacks Slot property - pad to consistent length (6 items + trinket) for UI |
 | 02-04 | Rune summary vs full detail | Match cards show keystone+styles, full rune tree available via match detail endpoint |
 | 02-04 | Batched queries for items/runes | 3 queries (participants, items, runes) prevents N+1 performance issues |
@@ -80,9 +86,9 @@ Progress: ████░░░░░░ 40% (2/5 phases complete)
 
 ## Session Continuity
 
-**Last session:** 2026-02-02
-**Activity:** Plan 02-04 execution
-**Stopped at:** Plan 02-04 complete
+**Last session:** 2026-02-04
+**Activity:** Plan 03-01 execution
+**Stopped at:** Plan 03-01 complete
 **Resume file:** None
 
 ---
@@ -90,23 +96,24 @@ Progress: ████░░░░░░ 40% (2/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Phase 2 (Summoner Profiles) with 4 plans:
-  - 02-01: Full match details endpoint with items/runes/spells
-  - 02-02: Complete profile response in single API call with parallel fetching
-  - 02-03: HybridCache for all stats queries (sub-500ms performance)
-  - 02-04: Match history with loadout data (items, runes, spells)
+- Completed Plan 03-01 (Champion Analytics Foundation):
+  - Analytics service architecture with compute and cached layers
+  - Champion win rate aggregation by role and rank tier
+  - 100-game minimum threshold for statistical significance
+  - REST endpoint GET /api/analytics/champions/{championId}/winrates
+  - 24hr L2 / 1hr L1 caching with tag-based invalidation
 
-**Phase 2 deliverables:**
-- Profile endpoint: `/api/summoners/{region}/{name}/{tag}` returns complete profile
-- Match detail endpoint: `/api/summoners/{id}/matches/{matchId}` returns full loadout
-- Match history: `/api/summoners/{id}/matches/recent` with items/runes/spells
-- Stats cached with HybridCache (5min TTL), invalidated on refresh
-- All verification criteria passed (15/15 must-haves)
+**Plan 03-01 deliverables:**
+- IChampionAnalyticsComputeService: Raw EF Core aggregation with AsNoTracking
+- IChampionAnalyticsService: HybridCache wrapper with 24hr TTL
+- ChampionAnalyticsController: REST endpoint with optional filters
+- Win rate DTO models (ChampionWinRateDto, ChampionWinRateSummary)
+- Requirement CHAMP-01 complete
 
-**Verification report:** `.planning/phases/02-summoner-profiles/02-VERIFICATION.md`
+**Summary:** `.planning/phases/03-champion-analytics/03-01-SUMMARY.md`
 
-**Ready for:** Phase 3 planning - Champion Analytics (win rates, builds, tier lists, matchups)
+**Ready for:** Plan 03-02 - Champion build analytics (items, runes)
 
 ---
 
-*Last updated: 2026-02-02*
+*Last updated: 2026-02-04*
