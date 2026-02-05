@@ -34,6 +34,7 @@ public static class ServiceCollectionExtensions
 
         // Jobs
         services.AddScoped<RefreshChampionAnalyticsJob>();
+        services.AddScoped<LiveGamePollingJob>();
 
         return services;
     }

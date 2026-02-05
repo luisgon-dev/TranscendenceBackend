@@ -25,6 +25,13 @@ public class DevelopmentWorker(IBackgroundJobClient backgroundJobClient, ILogger
             "0 4 * * *", // 4 AM UTC daily
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
+        // Schedule live game polling every minute. Job applies adaptive intervals per summoner state.
+        RecurringJob.AddOrUpdate<LiveGamePollingJob>(
+            "poll-live-games",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "* * * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
         // Run immediately on startup for development
         BackgroundJob.Enqueue<UpdateStaticDataJob>(x => x.Execute(CancellationToken.None));
 

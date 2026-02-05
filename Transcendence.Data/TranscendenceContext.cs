@@ -1,5 +1,6 @@
-﻿using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore;
 using Transcendence.Data.Models.Auth;
+using Transcendence.Data.Models.LiveGame;
 using Transcendence.Data.Models.LoL.Account;
 using Transcendence.Data.Models.LoL.Match;
 using Transcendence.Data.Models.LoL.Static;
@@ -28,7 +29,7 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
 
     public DbSet<RefreshLock> RefreshLocks { get; set; }
     public DbSet<ApiClientKey> ApiClientKeys { get; set; }
-
+    public DbSet<LiveGameSnapshot> LiveGameSnapshots { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<Rank>()
@@ -114,6 +115,16 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
             entity.Property(x => x.KeyPrefix).IsRequired();
         });
 
+        modelBuilder.Entity<LiveGameSnapshot>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.Puuid, x.PlatformRegion, x.ObservedAtUtc });
+            entity.HasIndex(x => x.NextPollAtUtc);
+            entity.Property(x => x.State).IsRequired();
+            entity.Property(x => x.PlatformRegion).IsRequired();
+            entity.Property(x => x.Puuid).IsRequired();
+        });
+
         modelBuilder.Entity<RuneVersion>(entity =>
         {
             entity.HasKey(rv => new
@@ -191,3 +202,6 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
             .HasQueryFilter(mpi => mpi.MatchParticipant.Match.Status != FetchStatus.PermanentlyUnfetchable);
     }
 }
+
+
+

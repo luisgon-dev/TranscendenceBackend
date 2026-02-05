@@ -28,6 +28,12 @@ public class ProductionWorker(
             "0 4 * * *",
             new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
 
+        recurringJobManager.AddOrUpdate<LiveGamePollingJob>(
+            "poll-live-games",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "* * * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
         return base.StartAsync(cancellationToken);
     }
 
