@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 3 of 5 - Champion Analytics
-Plan: 1 of 5 (Champion Analytics Foundation)
+Plan: 2 of 5 (Tier Lists)
 Status: In progress
-Last activity: 2026-02-04 - Completed 03-01-PLAN.md
+Last activity: 2026-02-05 - Completed 03-02-PLAN.md
 
-Progress: ████▓░░░░░ 42% (2.2/5 phases complete)
+Progress: ████▓░░░░░ 44% (2.4/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 7 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01)
-- Requirements remaining: 14
+- Requirements complete: 8 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-03)
+- Requirements remaining: 13
 
 **Phases:**
 - Total phases: 5
@@ -35,11 +35,17 @@ Progress: ████▓░░░░░ 42% (2.2/5 phases complete)
 - Plan 02-03: 15 minutes (3 tasks)
 - Plan 02-04: 4 minutes (3 tasks, Task 1 pre-complete)
 - Plan 03-01: 8 minutes (3 tasks)
+- Plan 03-02: 4 minutes (3 tasks, Task 1 pre-complete)
 
 ## Recent Decisions
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 03-02 | Composite score 70% WR + 30% PR | Win rate primary indicator, pick rate provides meta relevance - prevents niche picks dominating S tier |
+| 03-02 | Percentile-based tier thresholds | S=top 10%, A=10-30%, B=30-60%, C=60-85%, D=85%+ ensures tier distribution regardless of patch balance |
+| 03-02 | Movement compares tier grades not ranks | Tier letter change more stable than rank comparison (rank 15→20 might be SAME tier) |
+| 03-02 | Enums for TierGrade and TierMovement | Type safety prevents invalid values, better IDE support, consistent with .NET conventions |
+| 03-02 | Separate AnalyticsController | /api/analytics/tierlist vs /api/analytics/champions/{id}/winrates - tier lists are meta-level vs champion-specific |
 | 03-01 | 24hr L2 / 1hr L1 cache TTL for analytics | Longer than stats cache (5min) due to large dataset computation cost across thousands of matches |
 | 03-01 | 100-game minimum threshold for win rates | Ensures statistical significance, prevents misleading data from small samples (from 03-RESEARCH user decision) |
 | 03-01 | Two-tier analytics architecture | Compute service for raw EF queries, cached service wraps with HybridCache - clean separation, testability |
@@ -86,9 +92,9 @@ Progress: ████▓░░░░░ 42% (2.2/5 phases complete)
 
 ## Session Continuity
 
-**Last session:** 2026-02-04
-**Activity:** Plan 03-01 execution
-**Stopped at:** Plan 03-01 complete
+**Last session:** 2026-02-05
+**Activity:** Plan 03-02 execution
+**Stopped at:** Plan 03-02 complete
 **Resume file:** None
 
 ---
@@ -96,24 +102,26 @@ Progress: ████▓░░░░░ 42% (2.2/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Plan 03-01 (Champion Analytics Foundation):
-  - Analytics service architecture with compute and cached layers
-  - Champion win rate aggregation by role and rank tier
-  - 100-game minimum threshold for statistical significance
-  - REST endpoint GET /api/analytics/champions/{championId}/winrates
+- Completed Plan 03-02 (Tier Lists):
+  - Champion tier lists with S/A/B/C/D percentile-based grading
+  - Composite scoring: 70% win rate + 30% pick rate
+  - Movement tracking from previous patch (UP/DOWN/SAME/NEW)
+  - Per-role and unified tier list support
+  - REST endpoint GET /api/analytics/tierlist
   - 24hr L2 / 1hr L1 caching with tag-based invalidation
 
-**Plan 03-01 deliverables:**
-- IChampionAnalyticsComputeService: Raw EF Core aggregation with AsNoTracking
-- IChampionAnalyticsService: HybridCache wrapper with 24hr TTL
-- ChampionAnalyticsController: REST endpoint with optional filters
-- Win rate DTO models (ChampionWinRateDto, ChampionWinRateSummary)
-- Requirement CHAMP-01 complete
+**Plan 03-02 deliverables:**
+- TierListDto models with TierGrade and TierMovement enums
+- ComputeTierListAsync in ChampionAnalyticsComputeService with percentile thresholds
+- GetPreviousPatchAsync and GetPreviousPatchTiersAsync helpers for movement tracking
+- GetTierListAsync in ChampionAnalyticsService with caching
+- AnalyticsController at /api/analytics/tierlist
+- Requirement CHAMP-03 complete
 
-**Summary:** `.planning/phases/03-champion-analytics/03-01-SUMMARY.md`
+**Summary:** `.planning/phases/03-champion-analytics/03-02-SUMMARY.md`
 
-**Ready for:** Plan 03-02 - Champion build analytics (items, runes)
+**Ready for:** Plan 03-03 - Build recommendations (items, runes)
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-05*
