@@ -11,18 +11,18 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 3 of 5 - Champion Analytics
-Plan: 3 of 5 (Build Recommendations)
+Plan: 4 of 5 (Matchup Data)
 Status: In progress
-Last activity: 2026-02-05 - Completed 03-03-PLAN.md
+Last activity: 2026-02-05 - Completed 03-04-PLAN.md
 
-Progress: ████▓░░░░░ 46% (2.6/5 phases complete)
+Progress: ████▓░░░░░ 48% (2.8/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 9 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03)
-- Requirements remaining: 12
+- Requirements complete: 10 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04)
+- Requirements remaining: 11
 
 **Phases:**
 - Total phases: 5
@@ -37,11 +37,16 @@ Progress: ████▓░░░░░ 46% (2.6/5 phases complete)
 - Plan 03-01: 8 minutes (3 tasks)
 - Plan 03-02: 4 minutes (3 tasks, Task 1 pre-complete)
 - Plan 03-03: 7 minutes (3 tasks)
+- Plan 03-04: 7 minutes (3 tasks, Tasks 1-2 pre-complete)
 
 ## Recent Decisions
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 03-04 | 30-game minimum per matchup | Lower than 100-game champion minimum because matchup combinations are sparser |
+| 03-04 | Counter threshold < 48%, Favorable > 52% | Creates clear separation from neutral 50% win rate matchups |
+| 03-04 | Top 5 counters and top 5 favorable | Manageable list size for UI display while covering most common matchups |
+| 03-04 | Lane-specific self-join (same role, different team) | Ensures Mid vs Mid comparisons, not Mid vs Top - accurate meta matchups |
 | 03-03 | Flatten rune structure (PrimaryRunes, SubRunes, StatShards) | Simpler build grouping than nested DTO - previous RuneTreeDto structure would block build key generation |
 | 03-03 | 30-game minimum per specific build | Balances statistical significance with availability - stricter than 100-game overall minimum |
 | 03-03 | Build scoring via (games × winRate) | Simple composite balancing popularity with effectiveness for top 3 selection |
@@ -98,8 +103,8 @@ Progress: ████▓░░░░░ 46% (2.6/5 phases complete)
 ## Session Continuity
 
 **Last session:** 2026-02-05
-**Activity:** Plan 03-03 execution
-**Stopped at:** Plan 03-03 complete
+**Activity:** Plan 03-04 execution
+**Stopped at:** Plan 03-04 complete
 **Resume file:** None
 
 ---
@@ -107,28 +112,26 @@ Progress: ████▓░░░░░ 46% (2.6/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Plan 03-03 (Build Recommendations):
-  - Top 3 builds per champion/role with items and runes bundled
-  - Item frequency analysis with 70% core threshold
-  - Core vs situational item distinction
-  - Boots, trinkets, consumables excluded from core calculation
-  - Rune structure parsing from RuneVersion metadata
-  - Build grouping by item+rune combinations
-  - REST endpoint GET /api/analytics/champions/{championId}/builds
+- Completed Plan 03-04 (Matchup Data):
+  - Lane-specific champion matchups via self-join (same role, different team)
+  - Top 5 counters (< 48% win rate) and top 5 favorable matchups (> 52% win rate)
+  - 30-game minimum per individual matchup
+  - Game count included for reliability assessment
+  - REST endpoint GET /api/analytics/champions/{championId}/matchups
   - 24hr L2 / 1hr L1 caching with tag-based invalidation
 
-**Plan 03-03 deliverables:**
-- ChampionBuildDto with flattened rune structure (PrimaryRunes, SubRunes, StatShards)
-- ComputeBuildsAsync with item frequency analysis and rune metadata lookup
-- BuildRuneInfo helper determines primary/secondary trees by rune count
-- GetBuildsAsync in ChampionAnalyticsService with caching
-- Build recommendation endpoint in ChampionAnalyticsController
-- Requirement CHAMP-02 complete
+**Plan 03-04 deliverables:**
+- MatchupEntryDto with opponent, games, wins, losses, win rate
+- ComputeMatchupsAsync with lane-specific self-join query
+- Counter/favorable separation by win rate thresholds
+- GetMatchupsAsync in ChampionAnalyticsService with caching
+- Matchup endpoint in ChampionAnalyticsController
+- Requirement CHAMP-04 complete
 
-**Summary:** `.planning/phases/03-champion-analytics/03-03-SUMMARY.md`
+**Summary:** `.planning/phases/03-champion-analytics/03-04-SUMMARY.md`
 
-**Ready for:** Plan 03-04 - Matchup analysis (counters and favorable matchups)
+**Ready for:** Plan 03-05 - Recommendation synthesis (integrate tier list, builds, matchups)
 
 ---
 
-*Last updated: 2026-02-05*
+*Last updated: 2026-02-05 17:27 UTC*
