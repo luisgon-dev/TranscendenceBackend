@@ -1,6 +1,5 @@
 using Hangfire;
 using Hangfire.Storage;
-using Microsoft.Extensions.Logging;
 
 namespace Transcendence.Service.Core.Services.Extensions;
 

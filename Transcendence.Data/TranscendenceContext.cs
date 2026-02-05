@@ -86,10 +86,10 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
 
             // Enforce one participant per (Match, Summoner)
             entity.HasIndex(p => new
-                {
-                    p.MatchId,
-                    p.SummonerId
-                })
+            {
+                p.MatchId,
+                p.SummonerId
+            })
                 .IsUnique();
 
             // Common filter/index fields

@@ -1,8 +1,8 @@
+using Microsoft.IdentityModel.Tokens;
 using System.IdentityModel.Tokens.Jwt;
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text;
-using Microsoft.IdentityModel.Tokens;
 using Transcendence.Data.Models.Auth;
 using Transcendence.Service.Core.Services.Auth.Interfaces;
 

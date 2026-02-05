@@ -6,6 +6,7 @@ using System.Text.Json;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.LiveGame.Interfaces;
 using Transcendence.Service.Core.Services.LiveGame.Models;
+using Transcendence.Service.Core.Services.RiotApi;
 
 namespace Transcendence.Service.Core.Services.LiveGame.Implementations;
 
@@ -28,7 +29,7 @@ public class LiveGameService(
         string tagLine,
         CancellationToken ct = default)
     {
-        if (!TryParsePlatformRoute(platformRegion, out var platform))
+        if (!PlatformRouteParser.TryParse(platformRegion, out var platform))
             throw new ArgumentException($"Unsupported platform region '{platformRegion}'.", nameof(platformRegion));
 
         var normalizedRegion = platform.ToString();
@@ -160,32 +161,4 @@ public class LiveGameService(
         );
     }
 
-    private static bool TryParsePlatformRoute(string input, out PlatformRoute platform)
-    {
-        var normalized = input
-            .Replace(" ", string.Empty)
-            .Replace("-", string.Empty)
-            .Replace("_", string.Empty)
-            .ToUpperInvariant();
-
-        if (Enum.TryParse(normalized, true, out platform))
-            return true;
-
-        platform = normalized switch
-        {
-            "NA" => PlatformRoute.NA1,
-            "EUW" => PlatformRoute.EUW1,
-            "EUNE" => PlatformRoute.EUN1,
-            "KR" => PlatformRoute.KR,
-            "BR" => PlatformRoute.BR1,
-            "LAN" => PlatformRoute.LA1,
-            "LAS" => PlatformRoute.LA2,
-            "OCE" => PlatformRoute.OC1,
-            "JP" => PlatformRoute.JP1,
-            "TR" => PlatformRoute.TR1,
-            _ => default
-        };
-
-        return platform != default;
-    }
 }

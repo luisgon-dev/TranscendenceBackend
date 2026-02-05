@@ -2,10 +2,10 @@ using Camille.Enums;
 using Hangfire;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
-using Transcendence.Data.Models.LoL.Account;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Analysis.Interfaces;
 using Transcendence.Service.Core.Services.Jobs.Interfaces;
+using Transcendence.Service.Core.Services.RiotApi;
 using Transcendence.Service.Core.Services.RiotApi.DTOs;
 
 namespace Transcendence.WebAPI.Controllers;
@@ -36,7 +36,7 @@ public class SummonersController(
     public async Task<IActionResult> GetByRiotId([FromRoute] string region, [FromRoute] string name,
         [FromRoute] string tag, CancellationToken ct)
     {
-        if (!TryParsePlatformRoute(region, out var platform))
+        if (!PlatformRouteParser.TryParse(region, out var platform))
             return BadRequest($"Unsupported region '{region}'. Use a platform like NA1, EUW1, EUN1, KR, etc.");
 
         var platformRegion = platform.ToString();
@@ -183,7 +183,7 @@ public class SummonersController(
     public async Task<IActionResult> RefreshByRiotId([FromRoute] string region, [FromRoute] string name,
         [FromRoute] string tag, CancellationToken ct)
     {
-        if (!TryParsePlatformRoute(region, out var platform))
+        if (!PlatformRouteParser.TryParse(region, out var platform))
             return BadRequest($"Unsupported region '{region}'. Use a platform like NA1, EUW1, EUN1, KR, etc.");
 
         var key = BuildRefreshKey(platform, name, tag);
@@ -225,34 +225,6 @@ public class SummonersController(
         var nm = name.Trim().ToUpperInvariant();
         var tg = tag.Trim().ToUpperInvariant();
         return $"summoner-refresh:{platform}:{nm}:{tg}";
-    }
-
-    private static bool TryParsePlatformRoute(string input, out PlatformRoute platform)
-    {
-        // normalize
-        var normalized = input.Replace(" ", string.Empty).Replace("-", string.Empty).Replace("_", string.Empty)
-            .ToUpperInvariant();
-
-        // First try direct enum parse (handles NA1, EUW1, EUN1, KR, BR1, LA1, LA2, OC1, JP1, TR1, RU)
-        if (Enum.TryParse(normalized, true, out platform))
-            return true;
-
-        // Map common short forms to official platform routes
-        platform = normalized switch
-        {
-            "NA" => PlatformRoute.NA1,
-            "EUW" => PlatformRoute.EUW1,
-            "EUNE" => PlatformRoute.EUN1,
-            "KR" => PlatformRoute.KR,
-            "BR" => PlatformRoute.BR1,
-            "LAN" => PlatformRoute.LA1,
-            "LAS" => PlatformRoute.LA2,
-            "OCE" => PlatformRoute.OC1,
-            "JP" => PlatformRoute.JP1,
-            "TR" => PlatformRoute.TR1,
-            _ => default
-        };
-        return platform != default;
     }
 
     /// <summary>

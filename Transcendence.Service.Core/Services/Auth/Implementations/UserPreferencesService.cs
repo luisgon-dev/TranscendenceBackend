@@ -5,6 +5,7 @@ using Transcendence.Data.Models.Auth;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Auth.Interfaces;
 using Transcendence.Service.Core.Services.Auth.Models;
+using Transcendence.Service.Core.Services.RiotApi;
 
 namespace Transcendence.Service.Core.Services.Auth.Implementations;
 
@@ -27,7 +28,7 @@ public class UserPreferencesService(
 
     public async Task<FavoriteSummonerDto> AddFavoriteAsync(Guid userId, AddFavoriteRequest request, CancellationToken ct = default)
     {
-        if (!TryParsePlatformRoute(request.Region, out var platform))
+        if (!PlatformRouteParser.TryParse(request.Region, out var platform))
             throw new ArgumentException("Unsupported region.", nameof(request.Region));
 
         var region = platform.ToString();
@@ -43,7 +44,7 @@ public class UserPreferencesService(
                 var account = await riotApi.AccountV1().GetByRiotIdAsync(platform.ToRegional(), gameName, tagLine, ct);
                 puuid = account?.Puuid;
             }
-            catch (RiotResponseException ex) when (ex.GetResponse().StatusCode == System.Net.HttpStatusCode.NotFound)
+            catch (RiotResponseException ex) when (ex.GetResponse()?.StatusCode == System.Net.HttpStatusCode.NotFound)
             {
                 throw new ArgumentException("Summoner not found for the provided Riot ID.", nameof(request));
             }
@@ -142,28 +143,4 @@ public class UserPreferencesService(
         );
     }
 
-    private static bool TryParsePlatformRoute(string input, out PlatformRoute platform)
-    {
-        var normalized = input.Replace(" ", string.Empty).Replace("-", string.Empty).Replace("_", string.Empty)
-            .ToUpperInvariant();
-
-        if (Enum.TryParse(normalized, true, out platform))
-            return true;
-
-        platform = normalized switch
-        {
-            "NA" => PlatformRoute.NA1,
-            "EUW" => PlatformRoute.EUW1,
-            "EUNE" => PlatformRoute.EUN1,
-            "KR" => PlatformRoute.KR,
-            "BR" => PlatformRoute.BR1,
-            "LAN" => PlatformRoute.LA1,
-            "LAS" => PlatformRoute.LA2,
-            "OCE" => PlatformRoute.OC1,
-            "JP" => PlatformRoute.JP1,
-            "TR" => PlatformRoute.TR1,
-            _ => default
-        };
-        return platform != default;
-    }
 }

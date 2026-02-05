@@ -270,7 +270,7 @@ public class MatchService(
         if (Enum.TryParse(normalized, true, out regionalRoute))
             return true;
 
-        if (Enum.TryParse<PlatformRoute>(normalized, true, out var platformRoute))
+        if (PlatformRouteParser.TryParse(normalized, out var platformRoute))
         {
             regionalRoute = platformRoute.ToRegional();
             return true;
@@ -303,17 +303,17 @@ public class MatchService(
         var seenRunes = new HashSet<int>();
 
         foreach (var style in perks.Styles)
-        foreach (var selection in style.Selections)
-        {
-            var runeId = selection.Perk;
-            if (runeId == 0) continue;
-            if (seenRunes.Add(runeId))
-                participantRunes.Add(new MatchParticipantRune
-                {
-                    RuneId = runeId,
-                    PatchVersion = patch
-                });
-        }
+            foreach (var selection in style.Selections)
+            {
+                var runeId = selection.Perk;
+                if (runeId == 0) continue;
+                if (seenRunes.Add(runeId))
+                    participantRunes.Add(new MatchParticipantRune
+                    {
+                        RuneId = runeId,
+                        PatchVersion = patch
+                    });
+            }
 
         return participantRunes;
     }

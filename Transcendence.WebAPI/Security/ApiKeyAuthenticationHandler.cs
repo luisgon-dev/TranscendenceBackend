@@ -1,7 +1,7 @@
-using System.Security.Claims;
-using System.Text.Encodings.Web;
 using Microsoft.AspNetCore.Authentication;
 using Microsoft.Extensions.Options;
+using System.Security.Claims;
+using System.Text.Encodings.Web;
 using Transcendence.Service.Core.Services.Auth.Interfaces;
 
 namespace Transcendence.WebAPI.Security;

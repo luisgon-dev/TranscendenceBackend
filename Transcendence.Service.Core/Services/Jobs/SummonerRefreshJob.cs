@@ -6,6 +6,7 @@ using Transcendence.Data;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Jobs.Interfaces;
 using Transcendence.Service.Core.Services.RiotApi.Interfaces;
+using DataMatch = Transcendence.Data.Models.LoL.Match.Match;
 
 namespace Transcendence.Service.Core.Services.Jobs;
 
@@ -42,12 +43,13 @@ public class SummonerRefreshJob(
                 .Distinct(StringComparer.Ordinal)
                 .ToList();
 
-            foreach (var matchId in pending)
+            var existingMatchIds = await matchRepository.GetExistingMatchIdsAsync(pending, ct);
+            var matchesToPersist = new List<DataMatch>();
+
+            foreach (var matchId in pending.Where(id => !existingMatchIds.Contains(id)))
+            {
                 try
                 {
-                    var existing = await matchRepository.GetMatchByIdAsync(matchId, ct);
-                    if (existing != null) continue;
-
                     var match = await matchService.GetMatchDetailsAsync(matchId, regional, platformRoute, ct);
                     if (match == null)
                     {
@@ -56,26 +58,16 @@ public class SummonerRefreshJob(
                         continue;
                     }
 
-                    await matchRepository.AddMatchAsync(match, ct);
-                    await db.SaveChangesAsync(ct);
-                }
-                catch (DbUpdateException ex) when (IsDuplicateMatchIdViolation(ex))
-                {
-                    // Another worker already persisted this match.
-                    db.ChangeTracker.Clear();
-                    logger.LogInformation(
-                        "[Refresh] Match {MatchId} already exists. Skipping duplicate insert for {GameName}#{Tag}.",
-                        matchId,
-                        gameName,
-                        tagLine);
+                    matchesToPersist.Add(match);
                 }
                 catch (Exception ex)
                 {
-                    // Prevent stale failed entities from being retried in subsequent SaveChanges calls.
-                    db.ChangeTracker.Clear();
-                    logger.LogError(ex, "[Refresh] Error persisting match {MatchId} for {GameName}#{Tag}", matchId,
+                    logger.LogError(ex, "[Refresh] Error fetching match {MatchId} for {GameName}#{Tag}", matchId,
                         gameName, tagLine);
                 }
+            }
+
+            await PersistMatchesAsync(matchesToPersist, gameName, tagLine, ct);
 
             // After matches saved, invalidate stats cache for this summoner
             await InvalidateStatsCacheAsync(summoner.Id, ct);
@@ -99,6 +91,66 @@ public class SummonerRefreshJob(
             catch (Exception ex)
             {
                 logger.LogError(ex, "[Refresh] Failed to release refresh lock {LockKey}", lockKey);
+            }
+        }
+    }
+
+    private async Task PersistMatchesAsync(
+        IReadOnlyList<DataMatch> matches,
+        string gameName,
+        string tagLine,
+        CancellationToken ct)
+    {
+        if (matches.Count == 0)
+            return;
+
+        try
+        {
+            foreach (var match in matches)
+                await matchRepository.AddMatchAsync(match, ct);
+
+            await db.SaveChangesAsync(ct);
+            return;
+        }
+        catch (DbUpdateException ex) when (IsDuplicateMatchIdViolation(ex))
+        {
+            db.ChangeTracker.Clear();
+            logger.LogInformation(
+                "[Refresh] Duplicate match detected while persisting batch for {GameName}#{Tag}. Falling back to per-match persistence.",
+                gameName,
+                tagLine);
+        }
+        catch (Exception ex)
+        {
+            db.ChangeTracker.Clear();
+            logger.LogError(
+                ex,
+                "[Refresh] Unexpected error while persisting batch for {GameName}#{Tag}. Falling back to per-match persistence.",
+                gameName,
+                tagLine);
+        }
+
+        foreach (var match in matches)
+        {
+            try
+            {
+                await matchRepository.AddMatchAsync(match, ct);
+                await db.SaveChangesAsync(ct);
+            }
+            catch (DbUpdateException ex) when (IsDuplicateMatchIdViolation(ex))
+            {
+                db.ChangeTracker.Clear();
+                logger.LogInformation(
+                    "[Refresh] Match {MatchId} already exists. Skipping duplicate insert for {GameName}#{Tag}.",
+                    match.MatchId,
+                    gameName,
+                    tagLine);
+            }
+            catch (Exception ex)
+            {
+                db.ChangeTracker.Clear();
+                logger.LogError(ex, "[Refresh] Error persisting match {MatchId} for {GameName}#{Tag}", match.MatchId,
+                    gameName, tagLine);
             }
         }
     }
