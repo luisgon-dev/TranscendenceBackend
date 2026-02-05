@@ -9,35 +9,35 @@ Requirements for initial release. Each maps to roadmap phases.
 
 ### Data Infrastructure
 
-- [ ] **INFRA-01**: Static data (champions, items, runes) auto-updates on patch releases
-- [ ] **INFRA-02**: Two-tier caching with memory (L1) and Redis (L2)
+- [x] **INFRA-01**: Static data (champions, items, runes) auto-updates on patch releases
+- [x] **INFRA-02**: Two-tier caching with memory (L1) and Redis (L2)
 
 ### Summoner Profiles
 
-- [ ] **PROF-01**: User can look up any summoner by Riot ID (gameName#tagLine)
-- [ ] **PROF-02**: User can view summoner's recent match history with full stats
-- [ ] **PROF-03**: User can view summoner's current rank, LP, and win/loss record
-- [ ] **PROF-04**: User can view summoner's performance breakdown by champion
+- [x] **PROF-01**: User can look up any summoner by Riot ID (gameName#tagLine)
+- [x] **PROF-02**: User can view summoner's recent match history with full stats
+- [x] **PROF-03**: User can view summoner's current rank, LP, and win/loss record
+- [x] **PROF-04**: User can view summoner's performance breakdown by champion
 
 ### Champion Analytics
 
-- [ ] **CHAMP-01**: User can view champion win rates by role and rank tier
-- [ ] **CHAMP-02**: User can view popular builds (items, runes, skill orders) per champion
-- [ ] **CHAMP-03**: User can view champion tier lists by role
-- [ ] **CHAMP-04**: User can view champion matchup data (counters, synergies)
+- [x] **CHAMP-01**: User can view champion win rates by role and rank tier
+- [x] **CHAMP-02**: User can view popular builds (items, runes, skill orders) per champion
+- [x] **CHAMP-03**: User can view champion tier lists by role
+- [x] **CHAMP-04**: User can view champion matchup data (counters, synergies)
 
 ### Live Game
 
-- [ ] **LIVE-01**: User can detect if a summoner is currently in game
-- [ ] **LIVE-02**: User can view all participants' ranks and recent performance
-- [ ] **LIVE-03**: User can see team composition analysis (strengths/weaknesses)
-- [ ] **LIVE-04**: User can see estimated win probability for each team
+- [x] **LIVE-01**: User can detect if a summoner is currently in game
+- [x] **LIVE-02**: User can view all participants' ranks and recent performance
+- [x] **LIVE-03**: User can see team composition analysis (strengths/weaknesses)
+- [x] **LIVE-04**: User can see estimated win probability for each team
 
 ### Authentication
 
-- [ ] **AUTH-01**: Apps can authenticate via API keys
-- [ ] **AUTH-02**: User can create account and log in
-- [ ] **AUTH-03**: User can save favorites and preferences
+- [x] **AUTH-01**: Apps can authenticate via API keys
+- [x] **AUTH-02**: User can create account and log in
+- [x] **AUTH-03**: User can save favorites and preferences
 
 ### Management
 
@@ -78,23 +78,23 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| INFRA-01 | Phase 1 | Pending |
-| INFRA-02 | Phase 1 | Pending |
-| PROF-01 | Phase 2 | Pending |
-| PROF-02 | Phase 2 | Pending |
-| PROF-03 | Phase 2 | Pending |
-| PROF-04 | Phase 2 | Pending |
-| CHAMP-01 | Phase 3 | Pending |
-| CHAMP-02 | Phase 3 | Pending |
-| CHAMP-03 | Phase 3 | Pending |
-| CHAMP-04 | Phase 3 | Pending |
-| LIVE-01 | Phase 4 | Pending |
-| LIVE-02 | Phase 4 | Pending |
-| LIVE-03 | Phase 4 | Pending |
-| LIVE-04 | Phase 4 | Pending |
-| AUTH-01 | Phase 4 | Pending |
-| AUTH-02 | Phase 4 | Pending |
-| AUTH-03 | Phase 4 | Pending |
+| INFRA-01 | Phase 1 | Complete |
+| INFRA-02 | Phase 1 | Complete |
+| PROF-01 | Phase 2 | Complete |
+| PROF-02 | Phase 2 | Complete |
+| PROF-03 | Phase 2 | Complete |
+| PROF-04 | Phase 2 | Complete |
+| CHAMP-01 | Phase 3 | Complete |
+| CHAMP-02 | Phase 3 | Complete |
+| CHAMP-03 | Phase 3 | Complete |
+| CHAMP-04 | Phase 3 | Complete |
+| LIVE-01 | Phase 4 | Complete |
+| LIVE-02 | Phase 4 | Complete |
+| LIVE-03 | Phase 4 | Complete |
+| LIVE-04 | Phase 4 | Complete |
+| AUTH-01 | Phase 4 | Complete |
+| AUTH-02 | Phase 4 | Complete |
+| AUTH-03 | Phase 4 | Complete |
 | MGMT-01 | Phase 5 | Pending |
 | MGMT-02 | Phase 5 | Pending |
 | MGMT-03 | Phase 5 | Pending |
@@ -107,4 +107,4 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 ---
 *Requirements defined: 2026-02-01*
-*Last updated: 2026-02-01 after roadmap creation*
+*Last updated: 2026-02-05 after Phase 4 completion*

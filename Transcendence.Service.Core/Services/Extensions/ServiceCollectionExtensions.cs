@@ -28,6 +28,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IApiKeyService, ApiKeyService>();
         services.AddScoped<IJwtService, JwtService>();
         services.AddScoped<IUserAuthService, UserAuthService>();
+        services.AddScoped<IUserPreferencesService, UserPreferencesService>();
         services.AddScoped<ILiveGameService, LiveGameService>();
         services.AddScoped<ILiveGameAnalysisService, LiveGameAnalysisService>();
 

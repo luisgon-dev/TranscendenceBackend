@@ -11,23 +11,23 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 4 of 5 - Live Game & Authentication
-Plan: 5 of 6 (JWT user authentication)
-Status: In progress
-Last activity: 2026-02-05 - Completed 04-05-PLAN.md
+Plan: 6 of 6 (Favorites + endpoint hardening)
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 04-06-PLAN.md
 
-Progress: ████████░░ 84% (4.2/5 phases complete)
+Progress: ████████░░ 80% (4.0/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 11 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04, CHAMP-05)
-- Requirements remaining: 10
+- Requirements complete: 17 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04, LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03)
+- Requirements remaining: 4
 
 **Phases:**
 - Total phases: 5
-- Phases complete: 3
-- Current phase: Phase 4 (next)
+- Phases complete: 4
+- Current phase: Phase 5 (next)
 
 **Velocity:**
 - Plan 02-01: 15 minutes (3 tasks)
@@ -39,6 +39,12 @@ Progress: ████████░░ 84% (4.2/5 phases complete)
 - Plan 03-03: 7 minutes (3 tasks)
 - Plan 03-04: 7 minutes (3 tasks, Tasks 1-2 pre-complete)
 - Plan 03-05: 4 minutes (3 tasks)
+- Plan 04-01: 20 minutes (3 tasks)
+- Plan 04-02: 12 minutes (3 tasks)
+- Plan 04-03: 14 minutes (3 tasks)
+- Plan 04-04: 10 minutes (3 tasks)
+- Plan 04-05: 18 minutes (3 tasks)
+- Plan 04-06: 15 minutes (3 tasks)
 
 ## Recent Decisions
 
@@ -107,8 +113,8 @@ Progress: ████████░░ 84% (4.2/5 phases complete)
 ## Session Continuity
 
 **Last session:** 2026-02-05
-**Activity:** Plan 03-05 execution
-**Stopped at:** Plan 03-05 complete, Phase 3 complete
+**Activity:** Phase 4 execution (plans 04-01 through 04-06)
+**Stopped at:** Plan 04-06 complete, Phase 4 complete
 **Resume file:** None
 
 ---
@@ -116,30 +122,28 @@ Progress: ████████░░ 84% (4.2/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Plan 03-05 (Daily Refresh Job):
-  - RefreshChampionAnalyticsJob runs daily at 4 AM UTC via Hangfire
-  - Invalidates analytics cache tag before recomputing
-  - Pre-warms tier lists (5 roles × 4 tiers + all-tier variants = 30 combinations)
-  - Pre-warms top 20 champions per role (win rates, builds, matchups = 300 requests)
-  - Popular champion detection from match data (current patch only)
-  - Manual cache invalidation endpoint: POST /api/analytics/cache/invalidate
-  - Registered in DI and scheduled in both Dev/Prod workers
+- Completed all Phase 4 plans:
+  - 04-01: API key authentication middleware + key management
+  - 04-02: Spectator live game endpoint with cache
+  - 04-03: Adaptive polling job + live snapshots
+  - 04-04: Participant/team enrichment + win probability
+  - 04-05: JWT register/login/refresh/password-reset-init
+  - 04-06: User favorites/preferences + secured analytics invalidation endpoints
 
-**Plan 03-05 deliverables:**
-- RefreshChampionAnalyticsJob (158 lines) with cache pre-warming
-- Hangfire job registration and scheduling
-- Manual cache control endpoint for admins
-- Requirement CHAMP-05 complete
+**Phase 4 summaries:**
+- `.planning/phases/04-live-game-auth/04-01-SUMMARY.md`
+- `.planning/phases/04-live-game-auth/04-02-SUMMARY.md`
+- `.planning/phases/04-live-game-auth/04-03-SUMMARY.md`
+- `.planning/phases/04-live-game-auth/04-04-SUMMARY.md`
+- `.planning/phases/04-live-game-auth/04-05-SUMMARY.md`
+- `.planning/phases/04-live-game-auth/04-06-SUMMARY.md`
 
-**Summary:** `.planning/phases/03-champion-analytics/03-05-SUMMARY.md`
+**Phase 4 complete:**
+- LIVE-01, LIVE-02, LIVE-03, LIVE-04 complete
+- AUTH-01, AUTH-02, AUTH-03 complete
 
-**Phase 3 complete:**
-- All 5 plans executed (03-01 through 03-05)
-- All requirements met (CHAMP-01 through CHAMP-05)
-- Champion Analytics system fully operational with automated maintenance
-
-**Ready for:** Phase 4 - Summoner Discovery or Phase 5 - Rate Limiting & Error Handling
+**Ready for:** Phase 5 - Management & Monitoring
 
 ---
 
-*Last updated: 2026-02-05 17:32 UTC*
+*Last updated: 2026-02-05 21:27 UTC*

@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Transcendence.Service.Core.Services.Analytics.Interfaces;
 using Transcendence.Service.Core.Services.Analytics.Models;
+using Transcendence.WebAPI.Security;
 
 namespace Transcendence.WebAPI.Controllers;
 
@@ -32,6 +34,7 @@ public class AnalyticsController(IChampionAnalyticsService analyticsService) : C
     /// Triggers cache refresh on next request.
     /// </summary>
     [HttpPost("cache/invalidate")]
+    [Authorize(Policy = AuthPolicies.AppOnly)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> InvalidateCache(CancellationToken ct = default)
     {

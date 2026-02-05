@@ -31,6 +31,8 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
     public DbSet<ApiClientKey> ApiClientKeys { get; set; }
     public DbSet<UserAccount> UserAccounts { get; set; }
     public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
+    public DbSet<UserFavoriteSummoner> UserFavoriteSummoners { get; set; }
+    public DbSet<UserPreferences> UserPreferences { get; set; }
     public DbSet<LiveGameSnapshot> LiveGameSnapshots { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -135,6 +137,28 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
             entity.HasOne(x => x.UserAccount)
                 .WithMany(x => x.RefreshTokens)
                 .HasForeignKey(x => x.UserAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserFavoriteSummoner>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.UserAccountId, x.SummonerPuuid, x.PlatformRegion }).IsUnique();
+            entity.Property(x => x.SummonerPuuid).IsRequired();
+            entity.Property(x => x.PlatformRegion).IsRequired();
+
+            entity.HasOne(x => x.UserAccount)
+                .WithMany(x => x.FavoriteSummoners)
+                .HasForeignKey(x => x.UserAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
+        });
+
+        modelBuilder.Entity<UserPreferences>(entity =>
+        {
+            entity.HasKey(x => x.UserAccountId);
+            entity.HasOne(x => x.UserAccount)
+                .WithOne(x => x.Preferences)
+                .HasForeignKey<UserPreferences>(x => x.UserAccountId)
                 .OnDelete(DeleteBehavior.Cascade);
         });
 

@@ -10,4 +10,6 @@ public class UserAccount
     public DateTime UpdatedAtUtc { get; set; } = DateTime.UtcNow;
     public DateTime? LastLoginAtUtc { get; set; }
     public ICollection<UserRefreshToken> RefreshTokens { get; set; } = new List<UserRefreshToken>();
+    public ICollection<UserFavoriteSummoner> FavoriteSummoners { get; set; } = new List<UserFavoriteSummoner>();
+    public UserPreferences? Preferences { get; set; }
 }

@@ -1,6 +1,8 @@
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Transcendence.Service.Core.Services.Analytics.Interfaces;
 using Transcendence.Service.Core.Services.Analytics.Models;
+using Transcendence.WebAPI.Security;
 
 namespace Transcendence.WebAPI.Controllers;
 
@@ -93,6 +95,7 @@ public class ChampionAnalyticsController(IChampionAnalyticsService analyticsServ
     /// Used when patch changes or significant data updates occur.
     /// </summary>
     [HttpPost("cache/invalidate")]
+    [Authorize(Policy = AuthPolicies.AppOnly)]
     [ProducesResponseType(StatusCodes.Status200OK)]
     public async Task<IActionResult> InvalidateCache(CancellationToken ct)
     {

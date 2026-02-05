@@ -94,11 +94,11 @@ Plans:
 **Plans:** 5 plans in 3 waves
 
 Plans:
-- [ ] 03-01-PLAN.md — Analytics foundation + win rates by role/tier (Wave 1)
-- [ ] 03-02-PLAN.md — Tier lists with S/A/B/C/D grades and movement indicators (Wave 2)
-- [ ] 03-03-PLAN.md — Build recommendations with core/situational items (Wave 2)
-- [ ] 03-04-PLAN.md — Matchup data (counters and synergies) (Wave 2)
-- [ ] 03-05-PLAN.md — Daily refresh job with cache pre-warming (Wave 3)
+- [x] 03-01-PLAN.md — Analytics foundation + win rates by role/tier (Wave 1)
+- [x] 03-02-PLAN.md — Tier lists with S/A/B/C/D grades and movement indicators (Wave 2)
+- [x] 03-03-PLAN.md — Build recommendations with core/situational items (Wave 2)
+- [x] 03-04-PLAN.md — Matchup data (counters and synergies) (Wave 2)
+- [x] 03-05-PLAN.md — Daily refresh job with cache pre-warming (Wave 3)
 
 ---
 
@@ -131,12 +131,12 @@ Plans:
 **Plans:** 6 plans in 3 waves
 
 Plans:
-- [ ] 04-01-PLAN.md — API key authentication foundation with AppOnly policy (Wave 1)
-- [ ] 04-02-PLAN.md — Live game lookup endpoint with Spectator mapping + cache (Wave 1)
-- [ ] 04-03-PLAN.md — Adaptive live game polling job + snapshot persistence (Wave 2)
-- [ ] 04-04-PLAN.md — Participant/team analysis + win probability enrichment (Wave 2)
-- [ ] 04-05-PLAN.md — JWT user accounts (register/login/refresh/reset init) (Wave 3)
-- [ ] 04-06-PLAN.md — Favorites/preferences + secure admin operational endpoints (Wave 3)
+- [x] 04-01-PLAN.md — API key authentication foundation with AppOnly policy (Wave 1)
+- [x] 04-02-PLAN.md — Live game lookup endpoint with Spectator mapping + cache (Wave 1)
+- [x] 04-03-PLAN.md — Adaptive live game polling job + snapshot persistence (Wave 2)
+- [x] 04-04-PLAN.md — Participant/team analysis + win probability enrichment (Wave 2)
+- [x] 04-05-PLAN.md — JWT user accounts (register/login/refresh/reset init) (Wave 3)
+- [x] 04-06-PLAN.md — Favorites/preferences + secure admin operational endpoints (Wave 3)
 
 ---
 
@@ -174,11 +174,11 @@ Plans:
 |-------|--------|--------------|------------|
 | 1 - Foundation | ✓ Complete | INFRA-01, INFRA-02 | 100% |
 | 2 - Summoner Profiles | ✓ Complete | PROF-01, PROF-02, PROF-03, PROF-04 | 100% |
-| 3 - Champion Analytics | In Progress | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 0% |
-| 4 - Live Game & Auth | Pending | LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03 | 0% |
+| 3 - Champion Analytics | ✓ Complete | CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04 | 100% |
+| 4 - Live Game & Auth | ✓ Complete | LIVE-01, LIVE-02, LIVE-03, LIVE-04, AUTH-01, AUTH-02, AUTH-03 | 100% |
 | 5 - Management | Pending | MGMT-01, MGMT-02, MGMT-03, MGMT-04 | 0% |
 
-**Overall:** 29% (6/21 requirements complete)
+**Overall:** 81% (17/21 requirements complete)
 
 ## Coverage
 
@@ -206,4 +206,4 @@ Plans:
 
 ---
 
-*Last updated: 2026-02-04*
+*Last updated: 2026-02-05*
