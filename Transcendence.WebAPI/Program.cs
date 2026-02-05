@@ -47,7 +47,16 @@ builder.Services.AddHybridCache(options =>
 // Register only core, API remains keyless
 builder.Services.AddTranscendenceCore();
 builder.Services.AddProjectSyndraRepositories();
-builder.Services.AddSingleton(_ => RiotGamesApi.NewInstance(builder.Configuration.GetConnectionString("RiotApi")!));
+
+var riotApiKey = builder.Configuration.GetConnectionString("RiotApi")
+                 ?? builder.Configuration["RiotApi:ApiKey"];
+if (string.IsNullOrWhiteSpace(riotApiKey))
+{
+    throw new InvalidOperationException(
+        "Missing Riot API key configuration. Set 'ConnectionStrings:RiotApi' (or 'RiotApi:ApiKey').");
+}
+
+builder.Services.AddSingleton(_ => RiotGamesApi.NewInstance(riotApiKey));
 
 var jwtIssuer = builder.Configuration["Auth:Jwt:Issuer"] ?? "Transcendence";
 var jwtAudience = builder.Configuration["Auth:Jwt:Audience"] ?? "TranscendenceClients";

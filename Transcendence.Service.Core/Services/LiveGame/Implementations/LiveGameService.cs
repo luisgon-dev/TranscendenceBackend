@@ -2,6 +2,7 @@ using Camille.Enums;
 using Camille.RiotGames;
 using Camille.RiotGames.Util;
 using Microsoft.Extensions.Caching.Hybrid;
+using System.Text.Json;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.LiveGame.Interfaces;
 using Transcendence.Service.Core.Services.LiveGame.Models;
@@ -52,6 +53,24 @@ public class LiveGameService(
                     var gameInfo = await riotApi.SpectatorV5()
                         .GetCurrentGameInfoByPuuidAsync(platform, puuid, cancel);
 
+                    if (gameInfo == null)
+                    {
+                        return BuildOfflineResponse(normalizedRegion);
+                    }
+
+                    var participants = gameInfo.Participants?
+                        .Where(p => p is not null)
+                        .Select(p => new LiveGameParticipantDto(
+                            Puuid: p!.Puuid ?? string.Empty,
+                            RiotId: p.RiotId,
+                            SummonerId: p.SummonerId,
+                            TeamId: (int)p.TeamId,
+                            ChampionId: (int)p.ChampionId,
+                            Spell1Id: (int)p.Spell1Id,
+                            Spell2Id: (int)p.Spell2Id,
+                            ProfileIconId: (int)p.ProfileIconId
+                        )).ToList() ?? [];
+
                     var response = new LiveGameResponseDto(
                         State: "in_game",
                         PlatformRegion: normalizedRegion,
@@ -60,16 +79,7 @@ public class LiveGameService(
                         Map: gameInfo.MapId.ToString(),
                         GameStartTimeUtc: DateTimeOffset.FromUnixTimeMilliseconds(gameInfo.GameStartTime).UtcDateTime,
                         GameLengthSeconds: gameInfo.GameLength,
-                        Participants: gameInfo.Participants.Select(p => new LiveGameParticipantDto(
-                            Puuid: p.Puuid ?? string.Empty,
-                            RiotId: p.RiotId,
-                            SummonerId: p.SummonerId,
-                            TeamId: (int)p.TeamId,
-                            ChampionId: (int)p.ChampionId,
-                            Spell1Id: (int)p.Spell1Id,
-                            Spell2Id: (int)p.Spell2Id,
-                            ProfileIconId: (int)p.ProfileIconId
-                        )).ToList(),
+                        Participants: participants,
                         LastUpdatedUtc: DateTime.UtcNow,
                         DataAgeSeconds: 0
                     );
@@ -77,8 +87,18 @@ public class LiveGameService(
                     var analysis = await liveGameAnalysisService.AnalyzeAsync(normalizedRegion, response, cancel);
                     return response with { Analysis = analysis };
                 }
-                catch (RiotResponseException ex) when (ex.GetResponse().StatusCode == System.Net.HttpStatusCode.NotFound)
+                catch (RiotResponseException ex) when (ex.GetResponse()?.StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
+                    return BuildOfflineResponse(normalizedRegion);
+                }
+                catch (JsonException ex)
+                {
+                    logger.LogInformation(
+                        "Spectator payload parse fallback for {Region}/{GameName}#{TagLine}; treating as offline. Error: {Error}",
+                        normalizedRegion,
+                        normalizedGameName,
+                        normalizedTagLine,
+                        ex.Message);
                     return BuildOfflineResponse(normalizedRegion);
                 }
                 catch (Exception ex)
@@ -113,8 +133,15 @@ public class LiveGameService(
         if (!string.IsNullOrWhiteSpace(summoner?.Puuid))
             return summoner.Puuid;
 
-        var account = await riotApi.AccountV1().GetByRiotIdAsync(platform.ToRegional(), gameName, tagLine, ct);
-        return account.Puuid;
+        try
+        {
+            var account = await riotApi.AccountV1().GetByRiotIdAsync(platform.ToRegional(), gameName, tagLine, ct);
+            return account?.Puuid;
+        }
+        catch (RiotResponseException ex) when (ex.GetResponse()?.StatusCode == System.Net.HttpStatusCode.NotFound)
+        {
+            return null;
+        }
     }
 
     private static LiveGameResponseDto BuildOfflineResponse(string platformRegion)

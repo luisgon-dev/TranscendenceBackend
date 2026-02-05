@@ -1,5 +1,6 @@
 using Camille.Enums;
 using Camille.RiotGames;
+using Camille.RiotGames.Util;
 using Transcendence.Data.Models.Auth;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Auth.Interfaces;
@@ -37,8 +38,20 @@ public class UserPreferencesService(
         var puuid = existingSummoner?.Puuid;
         if (string.IsNullOrWhiteSpace(puuid))
         {
-            var account = await riotApi.AccountV1().GetByRiotIdAsync(platform.ToRegional(), gameName, tagLine, ct);
-            puuid = account.Puuid;
+            try
+            {
+                var account = await riotApi.AccountV1().GetByRiotIdAsync(platform.ToRegional(), gameName, tagLine, ct);
+                puuid = account?.Puuid;
+            }
+            catch (RiotResponseException ex) when (ex.GetResponse().StatusCode == System.Net.HttpStatusCode.NotFound)
+            {
+                throw new ArgumentException("Summoner not found for the provided Riot ID.", nameof(request));
+            }
+        }
+
+        if (string.IsNullOrWhiteSpace(puuid))
+        {
+            throw new ArgumentException("Summoner not found for the provided Riot ID.", nameof(request));
         }
 
         var duplicate = await userPreferencesRepository.GetFavoriteByPuuidAsync(userId, puuid!, region, ct);
