@@ -1,5 +1,6 @@
 using Camille.Enums;
 using Camille.RiotGames;
+using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Caching.Hybrid;
 using Transcendence.Data;
 using Transcendence.Data.Repositories.Interfaces;
@@ -35,17 +36,18 @@ public class SummonerRefreshJob(
                 .GetMatchIdsByPUUIDAsync(regional, summoner.Puuid!, 20, null, Queue.SUMMONERS_RIFT_5V5_RANKED_SOLO,
                     null, null, "ranked", ct);
 
-            // Deduplicate against existing stored matches
-            var pending = new List<string>(matchIds);
-            foreach (var id in matchIds)
-            {
-                var existing = await matchRepository.GetMatchByIdAsync(id, ct);
-                if (existing != null) pending.Remove(id);
-            }
+            // Defensively dedupe IDs returned by the API and process each match once.
+            var pending = matchIds
+                .Where(id => !string.IsNullOrWhiteSpace(id))
+                .Distinct(StringComparer.Ordinal)
+                .ToList();
 
             foreach (var matchId in pending)
                 try
                 {
+                    var existing = await matchRepository.GetMatchByIdAsync(matchId, ct);
+                    if (existing != null) continue;
+
                     var match = await matchService.GetMatchDetailsAsync(matchId, regional, platformRoute, ct);
                     if (match == null)
                     {
@@ -57,8 +59,20 @@ public class SummonerRefreshJob(
                     await matchRepository.AddMatchAsync(match, ct);
                     await db.SaveChangesAsync(ct);
                 }
+                catch (DbUpdateException ex) when (IsDuplicateMatchIdViolation(ex))
+                {
+                    // Another worker already persisted this match.
+                    db.ChangeTracker.Clear();
+                    logger.LogInformation(
+                        "[Refresh] Match {MatchId} already exists. Skipping duplicate insert for {GameName}#{Tag}.",
+                        matchId,
+                        gameName,
+                        tagLine);
+                }
                 catch (Exception ex)
                 {
+                    // Prevent stale failed entities from being retried in subsequent SaveChanges calls.
+                    db.ChangeTracker.Clear();
                     logger.LogError(ex, "[Refresh] Error persisting match {MatchId} for {GameName}#{Tag}", matchId,
                         gameName, tagLine);
                 }
@@ -115,5 +129,18 @@ public class SummonerRefreshJob(
             await cache.RemoveAsync($"stats:recent:{summonerId}:{page}:20", ct);
             await cache.RemoveAsync($"stats:recent:{summonerId}:{page}:10", ct);
         }
+    }
+
+    private static bool IsDuplicateMatchIdViolation(DbUpdateException ex)
+    {
+        var inner = ex.InnerException;
+        if (inner == null)
+            return false;
+
+        var sqlState = inner.GetType().GetProperty("SqlState")?.GetValue(inner)?.ToString();
+        var constraintName = inner.GetType().GetProperty("ConstraintName")?.GetValue(inner)?.ToString();
+
+        return string.Equals(sqlState, "23505", StringComparison.Ordinal)
+               && string.Equals(constraintName, "IX_Matches_MatchId", StringComparison.Ordinal);
     }
 }

@@ -3,6 +3,7 @@ using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 using Transcendence.Data;
 using Transcendence.Data.Models.LiveGame;
+using Transcendence.Data.Models.LoL.Match;
 using Transcendence.Data.Repositories.Interfaces;
 using Transcendence.Service.Core.Services.Jobs.Configuration;
 using Transcendence.Service.Core.Services.LiveGame.Interfaces;
@@ -16,6 +17,7 @@ public class LiveGamePollingJob(
     ILiveGameService liveGameService,
     ILiveGameSnapshotRepository snapshotRepository,
     IOptions<LiveGamePollingJobOptions> options,
+    IOptions<ChampionAnalyticsIngestionJobOptions> analyticsIngestionOptions,
     ILogger<LiveGamePollingJob> logger)
 {
     private sealed record TrackedSummonerCandidate(
@@ -29,6 +31,53 @@ public class LiveGamePollingJob(
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
         var jobOptions = options.Value;
+        if (jobOptions.PauseWhileChampionAnalyticsUnavailable)
+        {
+            var currentPatch = await db.Patches
+                .AsNoTracking()
+                .Where(p => p.IsActive)
+                .Select(p => p.Version)
+                .FirstOrDefaultAsync(ct);
+
+            if (string.IsNullOrWhiteSpace(currentPatch))
+            {
+                logger.LogInformation(
+                    "Live game polling skipped: champion analytics is prioritized and no active patch is available.");
+                return;
+            }
+
+            var requiredMatches = Math.Max(1, analyticsIngestionOptions.Value.MinimumSuccessfulMatchesForCurrentPatch);
+            var successfulMatchesForPatch = await db.Matches
+                .AsNoTracking()
+                .Where(m => m.Status == FetchStatus.Success && m.Patch == currentPatch)
+                .CountAsync(ct);
+
+            if (successfulMatchesForPatch < requiredMatches)
+            {
+                logger.LogInformation(
+                    "Live game polling skipped: champion analytics is prioritized and patch {Patch} has {MatchCount}/{RequiredMatchCount} successful matches.",
+                    currentPatch,
+                    successfulMatchesForPatch,
+                    requiredMatches);
+                return;
+            }
+
+            var hasRoleDataForAnalytics = await db.MatchParticipants
+                .AsNoTracking()
+                .AnyAsync(mp => mp.Match.Status == FetchStatus.Success
+                                && mp.Match.Patch == currentPatch
+                                && mp.TeamPosition != null
+                                && mp.TeamPosition != "", ct);
+
+            if (!hasRoleDataForAnalytics)
+            {
+                logger.LogInformation(
+                    "Live game polling skipped: champion analytics is prioritized and patch {Patch} has no role-tagged participant data yet.",
+                    currentPatch);
+                return;
+            }
+        }
+
         var maxTrackedPerRun = Math.Max(1, jobOptions.MaxTrackedSummonersPerRun);
         var maxRiotRequestsPerRun = Math.Max(1, jobOptions.MaxRiotRequestsPerRun);
         var now = DateTime.UtcNow;
