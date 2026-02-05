@@ -18,6 +18,15 @@ public interface IChampionAnalyticsService
         CancellationToken ct);
 
     /// <summary>
+    /// Gets champion tier list ranked by composite score (70% win rate + 30% pick rate).
+    /// Returns S/A/B/C/D tiers with movement indicators from previous patch.
+    /// </summary>
+    Task<TierListResponse> GetTierListAsync(
+        string? role,
+        string? rankTier,
+        CancellationToken ct);
+
+    /// <summary>
     /// Invalidates all analytics cache entries.
     /// Called when patch changes or significant data updates occur.
     /// </summary>

@@ -13,6 +13,7 @@ namespace Transcendence.Service.Core.Services.Analytics.Implementations;
 public class ChampionAnalyticsService : IChampionAnalyticsService
 {
     private const string WinRateCacheKeyPrefix = "analytics:champion:winrates:";
+    private const string TierListCacheKeyPrefix = "analytics:tierlist:";
     private const string AnalyticsCacheTag = "analytics";
 
     // Analytics cache options: 24hr total, 1hr L1 (analytics computed from large datasets)
@@ -74,6 +75,54 @@ public class ChampionAnalyticsService : IChampionAnalyticsService
             ChampionId: championId,
             Patch: currentPatch,
             ByRoleTier: winRates
+        );
+    }
+
+    public async Task<TierListResponse> GetTierListAsync(
+        string? role,
+        string? rankTier,
+        CancellationToken ct)
+    {
+        // Get current active patch
+        var currentPatch = await _context.Patches
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .Select(p => p.Version)
+            .FirstOrDefaultAsync(ct);
+
+        if (string.IsNullOrEmpty(currentPatch))
+        {
+            // No active patch, return empty tier list
+            return new TierListResponse(
+                Patch: "Unknown",
+                Role: role,
+                RankTier: rankTier,
+                Entries: new List<TierListEntry>()
+            );
+        }
+
+        // Normalize parameters
+        var normalizedRole = string.IsNullOrEmpty(role) ? "ALL" : role.ToUpperInvariant();
+        var normalizedTier = string.IsNullOrEmpty(rankTier) ? "all" : rankTier.ToUpperInvariant();
+
+        // Build cache key
+        var cacheKey = $"{TierListCacheKeyPrefix}{normalizedRole}:{normalizedTier}:{currentPatch}";
+        var tags = new[] { AnalyticsCacheTag, $"patch:{currentPatch}", "tierlist" };
+
+        // Get or compute tier list with caching
+        var entries = await _cache.GetOrCreateAsync(
+            cacheKey,
+            async cancel => await _computeService.ComputeTierListAsync(normalizedRole, normalizedTier, currentPatch, cancel),
+            AnalyticsCacheOptions,
+            tags: tags,
+            cancellationToken: ct
+        );
+
+        return new TierListResponse(
+            Patch: currentPatch,
+            Role: normalizedRole,
+            RankTier: normalizedTier,
+            Entries: entries
         );
     }
 
