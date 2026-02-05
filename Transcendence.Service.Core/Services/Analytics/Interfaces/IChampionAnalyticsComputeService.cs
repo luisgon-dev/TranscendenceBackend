@@ -27,4 +27,27 @@ public interface IChampionAnalyticsComputeService
         string? rankTier,
         string patch,
         CancellationToken ct);
+
+    /// <summary>
+    /// Computes top 3 builds for a champion with items and runes bundled.
+    /// Core items (70%+ appearance) distinguished from situational.
+    /// Excludes boots, trinkets, consumables from core calculation.
+    /// </summary>
+    Task<ChampionBuildsResponse> ComputeBuildsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct);
+
+    /// <summary>
+    /// Computes matchup data (counters and favorable matchups) for a champion.
+    /// Matchups are lane-specific (Mid vs Mid, Top vs Top, etc.).
+    /// </summary>
+    Task<ChampionMatchupsResponse> ComputeMatchupsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct);
 }

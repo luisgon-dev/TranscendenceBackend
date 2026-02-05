@@ -12,6 +12,8 @@ namespace Transcendence.Service.Core.Services.Analytics.Implementations;
 public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
 {
     private const int MinimumGamesRequired = 100;
+    private const int MinMatchupSampleSize = 30;
+    private const int MatchupsToShow = 5;
     private readonly TranscendenceContext _context;
 
     public ChampionAnalyticsComputeService(TranscendenceContext context)
@@ -286,4 +288,296 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
         TierGrade.D => 1,
         _ => 0
     };
+
+    // Excluded items: boots, trinkets, consumables
+    private static readonly HashSet<int> ExcludedFromCore = new()
+    {
+        // Boots (Tier 2)
+        3006, 3009, 3020, 3047, 3111, 3117, 3158,
+        // Tier 1 boots
+        1001,
+        // Trinkets
+        3340, 3363, 3364,
+        // Consumables
+        2003, 2031, 2033, 2055, 2138, 2139, 2140
+    };
+
+    private const double CoreItemThreshold = 0.70;
+    private const int MinBuildSampleSize = 30;
+
+    /// <summary>
+    /// Computes top 3 builds for a champion with items and runes bundled.
+    /// Core items (70%+ appearance) distinguished from situational.
+    /// </summary>
+    public async Task<ChampionBuildsResponse> ComputeBuildsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct)
+    {
+        // Step 1: Get all match data for this champion/role/patch/tier with items and runes
+        var baseQuery = _context.MatchParticipants
+            .AsNoTracking()
+            .Include(mp => mp.Items)
+            .Include(mp => mp.Runes)
+            .Where(mp => mp.ChampionId == championId
+                      && mp.Match.Patch == patch
+                      && mp.Match.Status == FetchStatus.Success
+                      && mp.TeamPosition == role);
+
+        // Join with Rank for tier filtering
+        var query = baseQuery
+            .Join(
+                _context.Ranks.Where(r => r.QueueType == "RANKED_SOLO_5x5"
+                    && (string.IsNullOrEmpty(rankTier) || r.Tier == rankTier)),
+                mp => mp.SummonerId,
+                r => r.SummonerId,
+                (mp, r) => mp
+            );
+
+        var matchData = await query
+            .Select(mp => new
+            {
+                mp.Win,
+                Items = mp.Items.Select(i => i.ItemId).ToList(),
+                Runes = mp.Runes.Select(r => r.RuneId).ToList()
+            })
+            .ToListAsync(ct);
+
+        if (matchData.Count < MinimumGamesRequired)
+            return new ChampionBuildsResponse(championId, role, rankTier ?? "all", patch,
+                new List<int>(), new List<ChampionBuildDto>());
+
+        // Step 2: Calculate global core items (appear in 70%+ of ALL games, excluding boots/trinkets/consumables)
+        var totalGames = matchData.Count;
+        var itemFrequency = matchData
+            .SelectMany(m => m.Items.Where(i => i != 0 && !ExcludedFromCore.Contains(i)))
+            .GroupBy(itemId => itemId)
+            .ToDictionary(
+                g => g.Key,
+                g => (double)g.Count() / totalGames
+            );
+
+        var globalCoreItems = itemFrequency
+            .Where(kvp => kvp.Value >= CoreItemThreshold)
+            .Select(kvp => kvp.Key)
+            .ToList();
+
+        // Step 3: Get rune metadata for style determination
+        var allRuneIds = matchData.SelectMany(m => m.Runes).Distinct().ToList();
+        var runeMetadata = await _context.RuneVersions
+            .AsNoTracking()
+            .Where(rv => allRuneIds.Contains(rv.RuneId) && rv.PatchVersion == patch)
+            .Select(rv => new { rv.RuneId, rv.RunePathId, rv.Slot })
+            .ToDictionaryAsync(rv => rv.RuneId, rv => new RuneMetadata(rv.RunePathId, rv.Slot), ct);
+
+        // Step 4: Group by build (items + runes as key)
+        var buildGroups = matchData
+            .Select(m => new
+            {
+                m.Win,
+                // Normalize item list (sort, exclude empty)
+                ItemKey = string.Join(",", m.Items.Where(i => i != 0).OrderBy(i => i)),
+                // Build rune structure
+                RuneInfo = BuildRuneInfo(m.Runes, runeMetadata),
+                Items = m.Items.Where(i => i != 0).OrderBy(i => i).ToList()
+            })
+            .GroupBy(m => new { m.ItemKey, m.RuneInfo.Key })
+            .Select(g => new
+            {
+                Items = g.First().Items,
+                RuneInfo = g.First().RuneInfo,
+                Games = g.Count(),
+                Wins = g.Sum(x => x.Win ? 1 : 0),
+                WinRate = (double)g.Sum(x => x.Win ? 1 : 0) / g.Count()
+            })
+            .Where(b => b.Games >= MinBuildSampleSize)
+            .OrderByDescending(b => b.Games * b.WinRate) // Score: popularity * success
+            .Take(3)
+            .ToList();
+
+        // Step 5: Map to DTOs
+        var builds = buildGroups.Select(build => new ChampionBuildDto(
+            build.Items,
+            globalCoreItems,
+            build.Items.Where(i => !globalCoreItems.Contains(i) && !ExcludedFromCore.Contains(i)).ToList(),
+            build.RuneInfo.PrimaryStyleId,
+            build.RuneInfo.SubStyleId,
+            build.RuneInfo.PrimaryRunes,
+            build.RuneInfo.SubRunes,
+            build.RuneInfo.StatShards,
+            build.Games,
+            build.WinRate
+        )).ToList();
+
+        return new ChampionBuildsResponse(
+            championId,
+            role,
+            rankTier ?? "all",
+            patch,
+            globalCoreItems,
+            builds
+        );
+    }
+
+    /// <summary>
+    /// Helper record for rune metadata lookup result.
+    /// </summary>
+    private record RuneMetadata(int RunePathId, int Slot);
+
+    /// <summary>
+    /// Helper record for rune information grouping.
+    /// </summary>
+    private record RuneInfoResult(
+        string Key,
+        int PrimaryStyleId,
+        int SubStyleId,
+        List<int> PrimaryRunes,
+        List<int> SubRunes,
+        List<int> StatShards
+    );
+
+    /// <summary>
+    /// Builds rune information structure from raw rune IDs using metadata lookup.
+    /// Determines primary/secondary trees by rune count per path.
+    /// Stat shards have RunePathId >= 5000.
+    /// </summary>
+    private static RuneInfoResult BuildRuneInfo(
+        List<int> runeIds,
+        Dictionary<int, RuneMetadata> runeMetadata)
+    {
+        var runesByPath = new Dictionary<int, List<(int RuneId, int Slot)>>();
+
+        foreach (var runeId in runeIds)
+        {
+            if (runeMetadata.TryGetValue(runeId, out var meta))
+            {
+                if (!runesByPath.ContainsKey(meta.RunePathId))
+                    runesByPath[meta.RunePathId] = new List<(int, int)>();
+                runesByPath[meta.RunePathId].Add((runeId, meta.Slot));
+            }
+        }
+
+        var primaryStyleId = 0;
+        var subStyleId = 0;
+        var primaryRunes = new List<int>();
+        var subRunes = new List<int>();
+        var statShards = new List<int>();
+
+        foreach (var (pathId, runes) in runesByPath)
+        {
+            if (pathId >= 5000) // Stat shards
+            {
+                statShards = runes.OrderBy(r => r.Slot).Select(r => r.RuneId).ToList();
+            }
+            else if (runes.Count >= 3) // Primary (4 runes)
+            {
+                primaryStyleId = pathId;
+                primaryRunes = runes.OrderBy(r => r.Slot).Select(r => r.RuneId).ToList();
+            }
+            else // Sub (2 runes)
+            {
+                subStyleId = pathId;
+                subRunes = runes.OrderBy(r => r.Slot).Select(r => r.RuneId).ToList();
+            }
+        }
+
+        // Build unique key for grouping
+        var key = $"{primaryStyleId}:{string.Join(",", primaryRunes)}|{subStyleId}:{string.Join(",", subRunes)}|{string.Join(",", statShards)}";
+
+        return new RuneInfoResult(key, primaryStyleId, subStyleId, primaryRunes, subRunes, statShards);
+    }
+
+    /// <summary>
+    /// Computes matchup data showing counters (bad matchups) and favorable matchups.
+    /// Uses lane-specific self-join: same role, different team.
+    /// </summary>
+    public async Task<ChampionMatchupsResponse> ComputeMatchupsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct)
+    {
+        // Self-join: champion participant vs opponent in same role, different team
+        // This gives us lane-specific matchups (Mid vs Mid, Top vs Top, etc.)
+
+        var championQuery = _context.MatchParticipants
+            .AsNoTracking()
+            .Where(mp => mp.ChampionId == championId
+                      && mp.TeamPosition == role
+                      && mp.Match.Patch == patch
+                      && mp.Match.Status == FetchStatus.Success);
+
+        // Apply rank tier filter if specified
+        if (!string.IsNullOrEmpty(rankTier))
+        {
+            championQuery = championQuery
+                .Join(
+                    _context.Ranks.Where(r => r.Tier == rankTier && r.QueueType == "RANKED_SOLO_5x5"),
+                    mp => mp.SummonerId,
+                    r => r.SummonerId,
+                    (mp, r) => mp
+                );
+        }
+
+        // Join with opponent: same match, same role, different team
+        // Since EF Core may struggle with record constructor in GroupBy/Select,
+        // we'll use anonymous types and materialize first
+        var matchupData = await championQuery
+            .Join(
+                _context.MatchParticipants,
+                champion => champion.MatchId,
+                opponent => opponent.MatchId,
+                (champion, opponent) => new { Champion = champion, Opponent = opponent }
+            )
+            .Where(x => x.Champion.TeamPosition == x.Opponent.TeamPosition  // Same role (lane matchup)
+                     && x.Champion.TeamId != x.Opponent.TeamId)              // Different team (opponent)
+            .GroupBy(x => x.Opponent.ChampionId)
+            .Select(g => new
+            {
+                OpponentChampionId = g.Key,
+                Games = g.Count(),
+                Wins = g.Sum(x => x.Champion.Win ? 1 : 0),
+                Losses = g.Sum(x => x.Champion.Win ? 0 : 1)
+            })
+            .Where(m => m.Games >= MinMatchupSampleSize)
+            .ToListAsync(ct);
+
+        // Convert to DTOs with calculated win rate
+        var matchups = matchupData
+            .Select(m => new MatchupEntryDto
+            {
+                OpponentChampionId = m.OpponentChampionId,
+                Games = m.Games,
+                Wins = m.Wins,
+                Losses = m.Losses,
+                WinRate = m.Games > 0 ? (double)m.Wins / m.Games : 0.0
+            })
+            .ToList();
+
+        // Separate counters (low win rate) and favorable (high win rate)
+        var counters = matchups
+            .Where(m => m.WinRate < 0.48)
+            .OrderBy(m => m.WinRate)
+            .Take(MatchupsToShow)
+            .ToList();
+
+        var favorable = matchups
+            .Where(m => m.WinRate > 0.52)
+            .OrderByDescending(m => m.WinRate)
+            .Take(MatchupsToShow)
+            .ToList();
+
+        return new ChampionMatchupsResponse
+        {
+            ChampionId = championId,
+            Role = role,
+            RankTier = rankTier ?? "all",
+            Patch = patch,
+            Counters = counters,
+            FavorableMatchups = favorable
+        };
+    }
 }
