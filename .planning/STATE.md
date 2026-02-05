@@ -11,23 +11,23 @@ See: .planning/PROJECT.md (updated 2026-01-31)
 ## Current Position
 
 Phase: 3 of 5 - Champion Analytics
-Plan: 4 of 5 (Matchup Data)
-Status: In progress
-Last activity: 2026-02-05 - Completed 03-04-PLAN.md
+Plan: 5 of 5 (Daily Refresh Job)
+Status: Phase complete
+Last activity: 2026-02-05 - Completed 03-05-PLAN.md
 
-Progress: ████▓░░░░░ 48% (2.8/5 phases complete)
+Progress: █████░░░░░ 60% (3.0/5 phases complete)
 
 ## Performance Metrics
 
 **Requirements:**
 - Total v1 requirements: 21
-- Requirements complete: 10 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04)
-- Requirements remaining: 11
+- Requirements complete: 11 (INFRA-01, INFRA-02, PROF-01, PROF-02, PROF-03, PROF-04, CHAMP-01, CHAMP-02, CHAMP-03, CHAMP-04, CHAMP-05)
+- Requirements remaining: 10
 
 **Phases:**
 - Total phases: 5
-- Phases complete: 2
-- Current phase: Phase 3
+- Phases complete: 3
+- Current phase: Phase 4 (next)
 
 **Velocity:**
 - Plan 02-01: 15 minutes (3 tasks)
@@ -38,11 +38,15 @@ Progress: ████▓░░░░░ 48% (2.8/5 phases complete)
 - Plan 03-02: 4 minutes (3 tasks, Task 1 pre-complete)
 - Plan 03-03: 7 minutes (3 tasks)
 - Plan 03-04: 7 minutes (3 tasks, Tasks 1-2 pre-complete)
+- Plan 03-05: 4 minutes (3 tasks)
 
 ## Recent Decisions
 
 | Phase | Decision | Rationale |
 |-------|----------|-----------|
+| 03-05 | Daily refresh at 4 AM UTC | Low-traffic hours minimize user impact during cache invalidation (midnight EST, 9 PM PST) |
+| 03-05 | Pre-warm top 20 champions per role | Pareto principle (80% traffic from 20% champions) balances coverage with execution time |
+| 03-05 | Pre-warm Gold/Platinum/Emerald/Diamond tiers | Covers 60%+ of ranked player base, highest population density |
 | 03-04 | 30-game minimum per matchup | Lower than 100-game champion minimum because matchup combinations are sparser |
 | 03-04 | Counter threshold < 48%, Favorable > 52% | Creates clear separation from neutral 50% win rate matchups |
 | 03-04 | Top 5 counters and top 5 favorable | Manageable list size for UI display while covering most common matchups |
@@ -103,8 +107,8 @@ Progress: ████▓░░░░░ 48% (2.8/5 phases complete)
 ## Session Continuity
 
 **Last session:** 2026-02-05
-**Activity:** Plan 03-04 execution
-**Stopped at:** Plan 03-04 complete
+**Activity:** Plan 03-05 execution
+**Stopped at:** Plan 03-05 complete, Phase 3 complete
 **Resume file:** None
 
 ---
@@ -112,26 +116,30 @@ Progress: ████▓░░░░░ 48% (2.8/5 phases complete)
 ## Context for Next Session
 
 **What we just did:**
-- Completed Plan 03-04 (Matchup Data):
-  - Lane-specific champion matchups via self-join (same role, different team)
-  - Top 5 counters (< 48% win rate) and top 5 favorable matchups (> 52% win rate)
-  - 30-game minimum per individual matchup
-  - Game count included for reliability assessment
-  - REST endpoint GET /api/analytics/champions/{championId}/matchups
-  - 24hr L2 / 1hr L1 caching with tag-based invalidation
+- Completed Plan 03-05 (Daily Refresh Job):
+  - RefreshChampionAnalyticsJob runs daily at 4 AM UTC via Hangfire
+  - Invalidates analytics cache tag before recomputing
+  - Pre-warms tier lists (5 roles × 4 tiers + all-tier variants = 30 combinations)
+  - Pre-warms top 20 champions per role (win rates, builds, matchups = 300 requests)
+  - Popular champion detection from match data (current patch only)
+  - Manual cache invalidation endpoint: POST /api/analytics/cache/invalidate
+  - Registered in DI and scheduled in both Dev/Prod workers
 
-**Plan 03-04 deliverables:**
-- MatchupEntryDto with opponent, games, wins, losses, win rate
-- ComputeMatchupsAsync with lane-specific self-join query
-- Counter/favorable separation by win rate thresholds
-- GetMatchupsAsync in ChampionAnalyticsService with caching
-- Matchup endpoint in ChampionAnalyticsController
-- Requirement CHAMP-04 complete
+**Plan 03-05 deliverables:**
+- RefreshChampionAnalyticsJob (158 lines) with cache pre-warming
+- Hangfire job registration and scheduling
+- Manual cache control endpoint for admins
+- Requirement CHAMP-05 complete
 
-**Summary:** `.planning/phases/03-champion-analytics/03-04-SUMMARY.md`
+**Summary:** `.planning/phases/03-champion-analytics/03-05-SUMMARY.md`
 
-**Ready for:** Plan 03-05 - Recommendation synthesis (integrate tier list, builds, matchups)
+**Phase 3 complete:**
+- All 5 plans executed (03-01 through 03-05)
+- All requirements met (CHAMP-01 through CHAMP-05)
+- Champion Analytics system fully operational with automated maintenance
+
+**Ready for:** Phase 4 - Summoner Discovery or Phase 5 - Rate Limiting & Error Handling
 
 ---
 
-*Last updated: 2026-02-05 17:27 UTC*
+*Last updated: 2026-02-05 17:32 UTC*
