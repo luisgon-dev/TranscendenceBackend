@@ -21,5 +21,6 @@ public record LiveGameResponseDto(
     long? GameLengthSeconds,
     List<LiveGameParticipantDto> Participants,
     DateTime LastUpdatedUtc,
-    int DataAgeSeconds
+    int DataAgeSeconds,
+    LiveGameAnalysisDto? Analysis = null
 );

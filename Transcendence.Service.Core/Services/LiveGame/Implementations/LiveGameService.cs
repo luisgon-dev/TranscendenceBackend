@@ -12,6 +12,7 @@ public class LiveGameService(
     RiotGamesApi riotApi,
     ISummonerRepository summonerRepository,
     HybridCache cache,
+    ILiveGameAnalysisService liveGameAnalysisService,
     ILogger<LiveGameService> logger) : ILiveGameService
 {
     private static readonly HybridCacheEntryOptions LiveGameCacheOptions = new()
@@ -51,7 +52,7 @@ public class LiveGameService(
                     var gameInfo = await riotApi.SpectatorV5()
                         .GetCurrentGameInfoByPuuidAsync(platform, puuid, cancel);
 
-                    return new LiveGameResponseDto(
+                    var response = new LiveGameResponseDto(
                         State: "in_game",
                         PlatformRegion: normalizedRegion,
                         GameId: gameInfo.GameId.ToString(),
@@ -72,6 +73,9 @@ public class LiveGameService(
                         LastUpdatedUtc: DateTime.UtcNow,
                         DataAgeSeconds: 0
                     );
+
+                    var analysis = await liveGameAnalysisService.AnalyzeAsync(normalizedRegion, response, cancel);
+                    return response with { Analysis = analysis };
                 }
                 catch (RiotResponseException ex) when (ex.GetResponse().StatusCode == System.Net.HttpStatusCode.NotFound)
                 {
