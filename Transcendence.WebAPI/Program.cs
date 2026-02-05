@@ -2,7 +2,10 @@ using Camille.RiotGames;
 using Hangfire;
 using Hangfire.PostgreSql;
 using Microsoft.AspNetCore.Authentication;
+using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.IdentityModel.Tokens;
+using System.Text;
 using Transcendence.Data;
 using Transcendence.Data.Extensions;
 using Transcendence.Service.Core.Services.Extensions;
@@ -46,6 +49,10 @@ builder.Services.AddTranscendenceCore();
 builder.Services.AddProjectSyndraRepositories();
 builder.Services.AddSingleton(_ => RiotGamesApi.NewInstance(builder.Configuration.GetConnectionString("RiotApi")!));
 
+var jwtIssuer = builder.Configuration["Auth:Jwt:Issuer"] ?? "Transcendence";
+var jwtAudience = builder.Configuration["Auth:Jwt:Audience"] ?? "TranscendenceClients";
+var jwtKey = builder.Configuration["Auth:Jwt:Key"] ?? "CHANGE_THIS_DEV_ONLY_KEY_32_CHARS_MINIMUM";
+
 builder.Services.AddAuthentication(options =>
     {
         options.DefaultAuthenticateScheme = AuthPolicies.ApiKeyScheme;
@@ -53,12 +60,34 @@ builder.Services.AddAuthentication(options =>
     })
     .AddScheme<AuthenticationSchemeOptions, ApiKeyAuthenticationHandler>(
         AuthPolicies.ApiKeyScheme,
-        _ => { });
+        _ => { })
+    .AddJwtBearer(JwtBearerDefaults.AuthenticationScheme, options =>
+    {
+        options.TokenValidationParameters = new TokenValidationParameters
+        {
+            ValidateIssuer = true,
+            ValidateAudience = true,
+            ValidateIssuerSigningKey = true,
+            ValidateLifetime = true,
+            ClockSkew = TimeSpan.FromMinutes(1),
+            ValidIssuer = jwtIssuer,
+            ValidAudience = jwtAudience,
+            IssuerSigningKey = new SymmetricSecurityKey(Encoding.UTF8.GetBytes(jwtKey))
+        };
+    });
 
 builder.Services.AddAuthorization(options =>
 {
     options.AddPolicy(AuthPolicies.AppOnly, policy =>
         policy.AddAuthenticationSchemes(AuthPolicies.ApiKeyScheme)
+            .RequireAuthenticatedUser());
+
+    options.AddPolicy(AuthPolicies.UserOnly, policy =>
+        policy.AddAuthenticationSchemes(JwtBearerDefaults.AuthenticationScheme)
+            .RequireAuthenticatedUser());
+
+    options.AddPolicy(AuthPolicies.AppOrUser, policy =>
+        policy.AddAuthenticationSchemes(AuthPolicies.ApiKeyScheme, JwtBearerDefaults.AuthenticationScheme)
             .RequireAuthenticatedUser());
 });
 

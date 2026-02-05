@@ -14,6 +14,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IRefreshLockRepository, RefreshLockRepository>();
         services.AddScoped<IApiClientKeyRepository, ApiClientKeyRepository>();
         services.AddScoped<ILiveGameSnapshotRepository, LiveGameSnapshotRepository>();
+        services.AddScoped<IUserAccountRepository, UserAccountRepository>();
 
         return services;
     }

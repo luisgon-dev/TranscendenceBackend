@@ -29,6 +29,8 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
 
     public DbSet<RefreshLock> RefreshLocks { get; set; }
     public DbSet<ApiClientKey> ApiClientKeys { get; set; }
+    public DbSet<UserAccount> UserAccounts { get; set; }
+    public DbSet<UserRefreshToken> UserRefreshTokens { get; set; }
     public DbSet<LiveGameSnapshot> LiveGameSnapshots { get; set; }
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -113,6 +115,27 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
             entity.Property(x => x.Name).IsRequired();
             entity.Property(x => x.KeyHash).IsRequired();
             entity.Property(x => x.KeyPrefix).IsRequired();
+        });
+
+        modelBuilder.Entity<UserAccount>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.EmailNormalized).IsUnique();
+            entity.Property(x => x.Email).IsRequired();
+            entity.Property(x => x.EmailNormalized).IsRequired();
+            entity.Property(x => x.PasswordHash).IsRequired();
+        });
+
+        modelBuilder.Entity<UserRefreshToken>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => new { x.UserAccountId, x.ExpiresAtUtc });
+
+            entity.HasOne(x => x.UserAccount)
+                .WithMany(x => x.RefreshTokens)
+                .HasForeignKey(x => x.UserAccountId)
+                .OnDelete(DeleteBehavior.Cascade);
         });
 
         modelBuilder.Entity<LiveGameSnapshot>(entity =>

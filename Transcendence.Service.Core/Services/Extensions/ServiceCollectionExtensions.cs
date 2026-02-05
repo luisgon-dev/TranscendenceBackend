@@ -26,6 +26,8 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChampionLoadoutAnalysisService, ChampionLoadoutAnalysisService>();
         services.AddScoped<ISummonerStatsService, SummonerStatsService>();
         services.AddScoped<IApiKeyService, ApiKeyService>();
+        services.AddScoped<IJwtService, JwtService>();
+        services.AddScoped<IUserAuthService, UserAuthService>();
         services.AddScoped<ILiveGameService, LiveGameService>();
         services.AddScoped<ILiveGameAnalysisService, LiveGameAnalysisService>();
 
