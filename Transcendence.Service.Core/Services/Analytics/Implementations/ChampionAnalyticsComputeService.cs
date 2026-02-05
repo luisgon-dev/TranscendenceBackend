@@ -109,4 +109,181 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
 
         return result;
     }
+
+    /// <summary>
+    /// Computes tier list ranking champions by composite score.
+    /// S = top 10%, A = 10-30%, B = 30-60%, C = 60-85%, D = 85%+
+    /// </summary>
+    public async Task<List<TierListEntry>> ComputeTierListAsync(
+        string? role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct)
+    {
+        // Step 1: Build base query for match participants in this patch
+        var baseQuery = _context.MatchParticipants
+            .AsNoTracking()
+            .Where(mp => mp.Match.Patch == patch)
+            .Where(mp => mp.Match.Status == FetchStatus.Success)
+            .Where(mp => mp.TeamPosition != null && mp.TeamPosition != "");
+
+        // Apply role filter (if not unified "ALL")
+        if (!string.IsNullOrEmpty(role) && !role.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+        {
+            baseQuery = baseQuery.Where(mp => mp.TeamPosition == role);
+        }
+
+        // Join with Ranks for tier filtering (RANKED_SOLO_5x5)
+        var query = from mp in baseQuery
+                    join r in _context.Ranks.Where(r => r.QueueType == "RANKED_SOLO_5x5")
+                        on mp.SummonerId equals r.SummonerId
+                    where string.IsNullOrEmpty(rankTier) || r.Tier == rankTier
+                    select new { mp.ChampionId, mp.TeamPosition, mp.Win, mp.MatchId };
+
+        // Step 2: Aggregate champion stats
+        var championStats = await query
+            .GroupBy(x => new { x.ChampionId, x.TeamPosition })
+            .Select(g => new
+            {
+                g.Key.ChampionId,
+                g.Key.TeamPosition,
+                Games = g.Count(),
+                Wins = g.Count(x => x.Win)
+            })
+            .Where(x => x.Games >= MinimumGamesRequired)
+            .ToListAsync(ct);
+
+        if (championStats.Count == 0)
+            return new List<TierListEntry>();
+
+        // Step 3: Calculate total games for pick rate (per role if role-specific, otherwise all)
+        var totalGamesQuery = query.Select(x => x.MatchId).Distinct();
+        var totalGames = await totalGamesQuery.CountAsync(ct);
+
+        // Step 4: Calculate composite scores
+        var withScores = championStats.Select(c => new
+        {
+            c.ChampionId,
+            c.TeamPosition,
+            c.Games,
+            c.Wins,
+            WinRate = c.Games > 0 ? (double)c.Wins / c.Games : 0.0,
+            PickRate = totalGames > 0 ? (double)c.Games / totalGames : 0.0
+        })
+        .Select(c => new
+        {
+            c.ChampionId,
+            c.TeamPosition,
+            c.Games,
+            c.WinRate,
+            c.PickRate,
+            // Composite: 70% win rate + 30% pick rate
+            CompositeScore = (c.WinRate * 0.70) + (c.PickRate * 0.30)
+        })
+        .OrderByDescending(x => x.CompositeScore)
+        .ToList();
+
+        // Step 5: Get previous patch tier list for movement comparison
+        var previousPatch = await GetPreviousPatchAsync(patch, ct);
+        var previousTiers = previousPatch != null
+            ? await GetPreviousPatchTiersAsync(role, rankTier, previousPatch, ct)
+            : new Dictionary<int, TierGrade>();
+
+        // Step 6: Assign percentile-based tiers
+        // Top 10% = S, 10-30% = A, 30-60% = B, 60-85% = C, 85%+ = D
+        var total = withScores.Count;
+        return withScores.Select((entry, index) =>
+        {
+            var percentile = (double)index / total;
+            var tier = percentile switch
+            {
+                < 0.10 => TierGrade.S,
+                < 0.30 => TierGrade.A,
+                < 0.60 => TierGrade.B,
+                < 0.85 => TierGrade.C,
+                _ => TierGrade.D
+            };
+
+            // Calculate movement from previous patch
+            var previousTier = previousTiers.GetValueOrDefault(entry.ChampionId);
+            var movement = CalculateMovement(tier, previousTier);
+
+            return new TierListEntry(
+                entry.ChampionId,
+                entry.TeamPosition,
+                tier,
+                entry.CompositeScore,
+                entry.WinRate,
+                entry.PickRate,
+                entry.Games,
+                movement,
+                previousTier
+            );
+        }).ToList();
+    }
+
+    /// <summary>
+    /// Gets the patch version immediately before the specified patch.
+    /// </summary>
+    private async Task<string?> GetPreviousPatchAsync(string currentPatch, CancellationToken ct)
+    {
+        // Get all patches ordered by release date, find the one before current
+        var patches = await _context.Patches
+            .AsNoTracking()
+            .OrderByDescending(p => p.ReleaseDate)
+            .Select(p => p.Version)
+            .Take(10)
+            .ToListAsync(ct);
+
+        var currentIndex = patches.IndexOf(currentPatch);
+        return currentIndex >= 0 && currentIndex + 1 < patches.Count
+            ? patches[currentIndex + 1]
+            : null;
+    }
+
+    /// <summary>
+    /// Gets tier assignments from previous patch for movement comparison.
+    /// </summary>
+    private async Task<Dictionary<int, TierGrade>> GetPreviousPatchTiersAsync(
+        string? role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct)
+    {
+        // Simplified query - just need champion -> tier mapping
+        var previousList = await ComputeTierListAsync(role, rankTier, patch, ct);
+        return previousList.ToDictionary(e => e.ChampionId, e => e.Tier);
+    }
+
+    /// <summary>
+    /// Calculates movement indicator by comparing tier grades.
+    /// </summary>
+    private static TierMovement CalculateMovement(TierGrade currentTier, TierGrade? previousTier)
+    {
+        if (!previousTier.HasValue)
+            return TierMovement.NEW;
+
+        var currentValue = TierToValue(currentTier);
+        var previousValue = TierToValue(previousTier.Value);
+
+        return (currentValue - previousValue) switch
+        {
+            > 0 => TierMovement.UP,
+            < 0 => TierMovement.DOWN,
+            _ => TierMovement.SAME
+        };
+    }
+
+    /// <summary>
+    /// Converts tier grade to numeric value for comparison.
+    /// </summary>
+    private static int TierToValue(TierGrade tier) => tier switch
+    {
+        TierGrade.S => 5,
+        TierGrade.A => 4,
+        TierGrade.B => 3,
+        TierGrade.C => 2,
+        TierGrade.D => 1,
+        _ => 0
+    };
 }

@@ -17,4 +17,14 @@ public interface IChampionAnalyticsComputeService
         ChampionAnalyticsFilter filter,
         string patch,
         CancellationToken ct);
+
+    /// <summary>
+    /// Computes tier list ranking champions by composite score (70% win rate + 30% pick rate).
+    /// Assigns S/A/B/C/D grades by percentile: S=top 10%, A=10-30%, B=30-60%, C=60-85%, D=85%+
+    /// </summary>
+    Task<List<TierListEntry>> ComputeTierListAsync(
+        string? role,
+        string? rankTier,
+        string patch,
+        CancellationToken ct);
 }
