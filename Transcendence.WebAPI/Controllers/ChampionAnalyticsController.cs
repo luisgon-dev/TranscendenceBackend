@@ -42,6 +42,30 @@ public class ChampionAnalyticsController(IChampionAnalyticsService analyticsServ
     }
 
     /// <summary>
+    /// Get top 3 builds for a champion in a role.
+    /// Builds include items and runes bundled together.
+    /// Core items (70%+ appearance) are distinguished from situational.
+    /// </summary>
+    /// <param name="championId">Champion ID</param>
+    /// <param name="role">Role: TOP, JUNGLE, MIDDLE, BOTTOM, UTILITY</param>
+    /// <param name="rankTier">Optional: Filter by rank tier</param>
+    [HttpGet("{championId}/builds")]
+    [ProducesResponseType(typeof(ChampionBuildsResponse), StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status400BadRequest)]
+    public async Task<ActionResult<ChampionBuildsResponse>> GetBuilds(
+        int championId,
+        [FromQuery] string role,
+        [FromQuery] string? rankTier = null,
+        CancellationToken ct = default)
+    {
+        if (string.IsNullOrEmpty(role))
+            return BadRequest("Role parameter is required");
+
+        var result = await analyticsService.GetBuildsAsync(championId, role, rankTier, ct);
+        return Ok(result);
+    }
+
+    /// <summary>
     /// Invalidates all analytics cache entries.
     /// Used when patch changes or significant data updates occur.
     /// </summary>

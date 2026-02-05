@@ -27,6 +27,16 @@ public interface IChampionAnalyticsService
         CancellationToken ct);
 
     /// <summary>
+    /// Gets top 3 builds for a champion in a role with caching.
+    /// Data is cached for 24 hours.
+    /// </summary>
+    Task<ChampionBuildsResponse> GetBuildsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        CancellationToken ct);
+
+    /// <summary>
     /// Invalidates all analytics cache entries.
     /// Called when patch changes or significant data updates occur.
     /// </summary>

@@ -14,6 +14,7 @@ public class ChampionAnalyticsService : IChampionAnalyticsService
 {
     private const string WinRateCacheKeyPrefix = "analytics:champion:winrates:";
     private const string TierListCacheKeyPrefix = "analytics:tierlist:";
+    private const string BuildsCacheKeyPrefix = "analytics:builds:";
     private const string AnalyticsCacheTag = "analytics";
 
     // Analytics cache options: 24hr total, 1hr L1 (analytics computed from large datasets)
@@ -126,9 +127,39 @@ public class ChampionAnalyticsService : IChampionAnalyticsService
         );
     }
 
+    public async Task<ChampionBuildsResponse> GetBuildsAsync(
+        int championId,
+        string role,
+        string? rankTier,
+        CancellationToken ct)
+    {
+        var patch = await GetCurrentPatchAsync(ct);
+        var normalizedRole = role.ToUpperInvariant();
+        var normalizedTier = rankTier ?? "all";
+        var cacheKey = $"{BuildsCacheKeyPrefix}{championId}:{normalizedRole}:{normalizedTier}:{patch}";
+        var tags = new[] { AnalyticsCacheTag, $"patch:{patch}", "builds" };
+
+        return await _cache.GetOrCreateAsync(
+            cacheKey,
+            async cancel => await _computeService.ComputeBuildsAsync(
+                championId, normalizedRole, rankTier, patch, cancel),
+            AnalyticsCacheOptions,
+            tags,
+            cancellationToken: ct);
+    }
+
     public async Task InvalidateAnalyticsCacheAsync(CancellationToken ct)
     {
         await _cache.RemoveByTagAsync(AnalyticsCacheTag, ct);
+    }
+
+    private async Task<string> GetCurrentPatchAsync(CancellationToken ct)
+    {
+        return await _context.Patches
+            .AsNoTracking()
+            .Where(p => p.IsActive)
+            .Select(p => p.Version)
+            .FirstOrDefaultAsync(ct) ?? "Unknown";
     }
 
     private static string BuildCacheKey(int championId, ChampionAnalyticsFilter filter, string patch)
