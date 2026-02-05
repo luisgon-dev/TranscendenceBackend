@@ -5,6 +5,7 @@ using Microsoft.AspNetCore.Authentication;
 using Microsoft.AspNetCore.Authentication.JwtBearer;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.IdentityModel.Tokens;
+using Microsoft.OpenApi;
 using System.Text;
 using Transcendence.Data;
 using Transcendence.Data.Extensions;
@@ -18,7 +19,33 @@ var builder = WebApplication.CreateBuilder(args);
 builder.Services.AddControllers();
 // Learn more about configuring Swagger/OpenAPI at https://aka.ms/aspnetcore/swashbuckle
 builder.Services.AddEndpointsApiExplorer();
-builder.Services.AddSwaggerGen();
+builder.Services.AddSwaggerGen(options =>
+{
+    options.SwaggerDoc("v1", new OpenApiInfo
+    {
+        Title = "Transcendence API",
+        Version = "v1",
+        Description = "League analytics API with app API-key and user JWT authentication."
+    });
+
+    options.AddSecurityDefinition(AuthPolicies.ApiKeyScheme, new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.ApiKey,
+        In = ParameterLocation.Header,
+        Name = "X-API-Key",
+        Description = "App authentication key for operational endpoints."
+    });
+
+    options.AddSecurityDefinition(JwtBearerDefaults.AuthenticationScheme, new OpenApiSecurityScheme
+    {
+        Type = SecuritySchemeType.Http,
+        Scheme = "bearer",
+        BearerFormat = "JWT",
+        Description = "User JWT access token from /api/auth/login."
+    });
+
+    options.OperationFilter<AuthPolicyOperationFilter>();
+});
 
 // Infrastructure: DbContext, HTTP, domain services, repositories
 builder.Services.AddDbContext<TranscendenceContext>(options =>
@@ -114,7 +141,11 @@ var app = builder.Build();
 if (app.Environment.IsDevelopment())
 {
     app.UseSwagger();
-    app.UseSwaggerUI();
+    app.UseSwaggerUI(options =>
+    {
+        options.DisplayRequestDuration();
+        options.EnablePersistAuthorization();
+    });
 }
 
 app.UseHttpsRedirection();

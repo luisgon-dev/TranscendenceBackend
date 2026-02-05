@@ -22,4 +22,8 @@
         <PackageReference Include="Hangfire.PostgreSql" Version="1.20.13"/>
     </ItemGroup>
 
+    <ItemGroup>
+        <ProjectReference Include="..\Transcendence.Service.Core\Transcendence.Service.Core.csproj" />
+    </ItemGroup>
+
 </Project>

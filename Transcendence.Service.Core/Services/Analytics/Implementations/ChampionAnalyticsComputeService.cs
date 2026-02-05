@@ -122,6 +122,9 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
         string patch,
         CancellationToken ct)
     {
+        var normalizedRole = string.IsNullOrWhiteSpace(role) ? "ALL" : role.ToUpperInvariant();
+        var isUnifiedRole = normalizedRole == "ALL";
+
         // Step 1: Build base query for match participants in this patch
         var baseQuery = _context.MatchParticipants
             .AsNoTracking()
@@ -130,9 +133,9 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
             .Where(mp => mp.TeamPosition != null && mp.TeamPosition != "");
 
         // Apply role filter (if not unified "ALL")
-        if (!string.IsNullOrEmpty(role) && !role.Equals("ALL", StringComparison.OrdinalIgnoreCase))
+        if (!isUnifiedRole)
         {
-            baseQuery = baseQuery.Where(mp => mp.TeamPosition == role);
+            baseQuery = baseQuery.Where(mp => mp.TeamPosition == normalizedRole);
         }
 
         // Join with Ranks for tier filtering (RANKED_SOLO_5x5)
@@ -143,24 +146,35 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
                     select new { mp.ChampionId, mp.TeamPosition, mp.Win, mp.MatchId };
 
         // Step 2: Aggregate champion stats
-        var championStats = await query
-            .GroupBy(x => new { x.ChampionId, x.TeamPosition })
-            .Select(g => new
-            {
-                g.Key.ChampionId,
-                g.Key.TeamPosition,
-                Games = g.Count(),
-                Wins = g.Count(x => x.Win)
-            })
-            .Where(x => x.Games >= MinimumGamesRequired)
-            .ToListAsync(ct);
+        var championStats = isUnifiedRole
+            ? await query
+                .GroupBy(x => x.ChampionId)
+                .Select(g => new
+                {
+                    ChampionId = g.Key,
+                    TeamPosition = "ALL",
+                    Games = g.Count(),
+                    Wins = g.Count(x => x.Win)
+                })
+                .Where(x => x.Games >= MinimumGamesRequired)
+                .ToListAsync(ct)
+            : await query
+                .GroupBy(x => new { x.ChampionId, x.TeamPosition })
+                .Select(g => new
+                {
+                    g.Key.ChampionId,
+                    TeamPosition = g.Key.TeamPosition!,
+                    Games = g.Count(),
+                    Wins = g.Count(x => x.Win)
+                })
+                .Where(x => x.Games >= MinimumGamesRequired)
+                .ToListAsync(ct);
 
         if (championStats.Count == 0)
             return new List<TierListEntry>();
 
         // Step 3: Calculate total games for pick rate (per role if role-specific, otherwise all)
-        var totalGamesQuery = query.Select(x => x.MatchId).Distinct();
-        var totalGames = await totalGamesQuery.CountAsync(ct);
+        var totalParticipants = await query.CountAsync(ct);
 
         // Step 4: Calculate composite scores
         var withScores = championStats.Select(c => new
@@ -170,7 +184,7 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
             c.Games,
             c.Wins,
             WinRate = c.Games > 0 ? (double)c.Wins / c.Games : 0.0,
-            PickRate = totalGames > 0 ? (double)c.Games / totalGames : 0.0
+            PickRate = totalParticipants > 0 ? (double)c.Games / totalParticipants : 0.0
         })
         .Select(c => new
         {
@@ -188,8 +202,8 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
         // Step 5: Get previous patch tier list for movement comparison
         var previousPatch = await GetPreviousPatchAsync(patch, ct);
         var previousTiers = previousPatch != null
-            ? await GetPreviousPatchTiersAsync(role, rankTier, previousPatch, ct)
-            : new Dictionary<int, TierGrade>();
+            ? await GetPreviousPatchTiersAsync(normalizedRole, rankTier, previousPatch, ct)
+            : new Dictionary<(int ChampionId, string Role), TierGrade>();
 
         // Step 6: Assign percentile-based tiers
         // Top 10% = S, 10-30% = A, 30-60% = B, 60-85% = C, 85%+ = D
@@ -207,7 +221,8 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
             };
 
             // Calculate movement from previous patch
-            var previousTier = previousTiers.GetValueOrDefault(entry.ChampionId);
+            var lookupKey = (entry.ChampionId, NormalizeRole(entry.TeamPosition));
+            var previousTier = previousTiers.GetValueOrDefault(lookupKey);
             var movement = CalculateMovement(tier, previousTier);
 
             return new TierListEntry(
@@ -246,16 +261,21 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
     /// <summary>
     /// Gets tier assignments from previous patch for movement comparison.
     /// </summary>
-    private async Task<Dictionary<int, TierGrade>> GetPreviousPatchTiersAsync(
-        string? role,
+    private async Task<Dictionary<(int ChampionId, string Role), TierGrade>> GetPreviousPatchTiersAsync(
+        string role,
         string? rankTier,
         string patch,
         CancellationToken ct)
     {
         // Simplified query - just need champion -> tier mapping
         var previousList = await ComputeTierListAsync(role, rankTier, patch, ct);
-        return previousList.ToDictionary(e => e.ChampionId, e => e.Tier);
+        return previousList
+            .GroupBy(e => (e.ChampionId, Role: NormalizeRole(e.Role)))
+            .ToDictionary(g => g.Key, g => g.First().Tier);
     }
+
+    private static string NormalizeRole(string? role) =>
+        string.IsNullOrWhiteSpace(role) ? "ALL" : role.ToUpperInvariant();
 
     /// <summary>
     /// Calculates movement indicator by comparing tier grades.

@@ -1,42 +1,92 @@
+using Hangfire;
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Options;
 using Transcendence.Data;
 using Transcendence.Data.Models.LiveGame;
 using Transcendence.Data.Repositories.Interfaces;
+using Transcendence.Service.Core.Services.Jobs.Configuration;
 using Transcendence.Service.Core.Services.LiveGame.Interfaces;
 using Transcendence.Service.Core.Services.LiveGame.Models;
 
 namespace Transcendence.Service.Core.Services.Jobs;
 
+[DisableConcurrentExecution(timeoutInSeconds: 5 * 60)]
 public class LiveGamePollingJob(
     TranscendenceContext db,
     ILiveGameService liveGameService,
     ILiveGameSnapshotRepository snapshotRepository,
+    IOptions<LiveGamePollingJobOptions> options,
     ILogger<LiveGamePollingJob> logger)
 {
-    private const int MaxTrackedSummonersPerRun = 200;
+    private sealed record TrackedSummonerCandidate(
+        Guid Id,
+        string Puuid,
+        string GameName,
+        string TagLine,
+        string PlatformRegion,
+        DateTime UpdatedAt);
 
     public async Task ExecuteAsync(CancellationToken ct = default)
     {
+        var jobOptions = options.Value;
+        var maxTrackedPerRun = Math.Max(1, jobOptions.MaxTrackedSummonersPerRun);
+        var maxRiotRequestsPerRun = Math.Max(1, jobOptions.MaxRiotRequestsPerRun);
         var now = DateTime.UtcNow;
 
-        var trackedSummoners = await db.Summoners
+        var trackedSummonerQuery = db.Summoners
             .AsNoTracking()
-            .Where(s => s.Puuid != null && s.GameName != null && s.TagLine != null && s.PlatformRegion != null)
-            .OrderByDescending(s => s.UpdatedAt)
-            .Take(MaxTrackedSummonersPerRun)
-            .Select(s => new
+            .Where(s => s.Puuid != null && s.GameName != null && s.TagLine != null && s.PlatformRegion != null);
+
+        if (jobOptions.PollOnlyFavoriteSummoners)
+        {
+            var favorites = db.UserFavoriteSummoners.AsNoTracking();
+
+            if (jobOptions.RespectUserLivePollingPreference)
             {
+                var preferences = db.UserPreferences.AsNoTracking();
+                trackedSummonerQuery = trackedSummonerQuery.Where(s => favorites.Any(f =>
+                    f.SummonerPuuid == s.Puuid &&
+                    f.PlatformRegion == s.PlatformRegion &&
+                    !preferences.Any(p => p.UserAccountId == f.UserAccountId && !p.LivePollingEnabled)));
+            }
+            else
+            {
+                trackedSummonerQuery = trackedSummonerQuery.Where(s =>
+                    favorites.Any(f => f.SummonerPuuid == s.Puuid && f.PlatformRegion == s.PlatformRegion));
+            }
+        }
+
+        var trackedSummoners = await trackedSummonerQuery
+            .OrderByDescending(s => s.UpdatedAt)
+            .Take(maxTrackedPerRun)
+            .Select(s => new TrackedSummonerCandidate(
                 s.Id,
-                s.Puuid,
-                s.GameName,
-                s.TagLine,
-                s.PlatformRegion
-            })
+                s.Puuid!,
+                s.GameName!,
+                s.TagLine!,
+                s.PlatformRegion!,
+                s.UpdatedAt))
             .ToListAsync(ct);
 
+        if (trackedSummoners.Count == 0)
+        {
+            logger.LogInformation("Live game polling skipped: no summoners are eligible under current job filters.");
+            return;
+        }
+
         var processed = 0;
+        var attemptedRequests = 0;
         foreach (var summoner in trackedSummoners)
         {
+            if (attemptedRequests >= maxRiotRequestsPerRun)
+            {
+                logger.LogInformation(
+                    "Live game polling request budget reached ({RequestCount}/{RequestBudget}). Ending cycle early.",
+                    attemptedRequests,
+                    maxRiotRequestsPerRun);
+                break;
+            }
+
             var latest = await snapshotRepository.GetLatestByPuuidAsync(
                 summoner.Puuid!,
                 summoner.PlatformRegion!,
@@ -47,6 +97,7 @@ public class LiveGamePollingJob(
 
             try
             {
+                attemptedRequests++;
                 var response = await liveGameService.GetCurrentGameAsync(
                     summoner.PlatformRegion!,
                     summoner.GameName!,
@@ -90,6 +141,9 @@ public class LiveGamePollingJob(
             }
         }
 
-        logger.LogInformation("Live game polling cycle complete. Processed {Count} summoners.", processed);
+        logger.LogInformation(
+            "Live game polling cycle complete. Processed {Count} summoners, attempted {RequestCount} Riot calls.",
+            processed,
+            attemptedRequests);
     }
 }

@@ -1,6 +1,9 @@
+using System.Security.Claims;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Transcendence.Service.Core.Services.Auth.Interfaces;
 using Transcendence.Service.Core.Services.Auth.Models;
+using Transcendence.WebAPI.Security;
 
 namespace Transcendence.WebAPI.Controllers;
 
@@ -55,5 +58,24 @@ public class AuthController(IUserAuthService userAuthService) : ControllerBase
     {
         await userAuthService.InitiatePasswordResetAsync(request, ct);
         return Ok(new { message = "If the account exists, a reset flow has been initiated." });
+    }
+
+    [HttpGet("me")]
+    [Authorize(Policy = AuthPolicies.AppOrUser)]
+    [ProducesResponseType(StatusCodes.Status200OK)]
+    [ProducesResponseType(StatusCodes.Status401Unauthorized)]
+    public IActionResult Me()
+    {
+        var subject = User.FindFirstValue(ClaimTypes.NameIdentifier);
+        var name = User.FindFirstValue(ClaimTypes.Name);
+        var roles = User.FindAll(ClaimTypes.Role).Select(x => x.Value).ToArray();
+
+        return Ok(new
+        {
+            Subject = subject,
+            Name = name,
+            Roles = roles,
+            AuthType = User.Identity?.AuthenticationType
+        });
     }
 }

@@ -37,6 +37,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChampionAnalyticsService, ChampionAnalyticsService>();
 
         // Jobs
+        services.AddScoped<ChampionAnalyticsIngestionJob>();
         services.AddScoped<RefreshChampionAnalyticsJob>();
         services.AddScoped<LiveGamePollingJob>();
 
@@ -63,6 +64,7 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IStaticDataService, StaticDataService>();
 
         services.AddScoped<UpdateStaticDataJob>();
+        services.AddScoped<RetryFailedMatchesJob>();
         services.AddScoped<ISummonerRefreshJob, SummonerRefreshJob>();
         return services;
     }
