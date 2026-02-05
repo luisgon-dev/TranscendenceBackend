@@ -18,6 +18,13 @@ public class DevelopmentWorker(IBackgroundJobClient backgroundJobClient, ILogger
             job => job.Execute(CancellationToken.None),
             "0 */6 * * *"); // Every 6 hours at minute 0
 
+        // Schedule analytics refresh daily at 4 AM UTC
+        RecurringJob.AddOrUpdate<RefreshChampionAnalyticsJob>(
+            "refresh-champion-analytics",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "0 4 * * *", // 4 AM UTC daily
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
         // Run immediately on startup for development
         BackgroundJob.Enqueue<UpdateStaticDataJob>(x => x.Execute(CancellationToken.None));
 

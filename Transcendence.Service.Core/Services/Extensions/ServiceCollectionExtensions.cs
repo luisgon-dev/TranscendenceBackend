@@ -26,6 +26,9 @@ public static class ServiceCollectionExtensions
         services.AddScoped<IChampionAnalyticsComputeService, ChampionAnalyticsComputeService>();
         services.AddScoped<IChampionAnalyticsService, ChampionAnalyticsService>();
 
+        // Jobs
+        services.AddScoped<RefreshChampionAnalyticsJob>();
+
         return services;
     }
 

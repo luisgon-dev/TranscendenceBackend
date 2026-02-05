@@ -21,6 +21,13 @@ public class ProductionWorker(
             job => job.Execute(CancellationToken.None),
             Cron.Hourly);
 
+        // Schedule analytics refresh daily at 4 AM UTC
+        recurringJobManager.AddOrUpdate<RefreshChampionAnalyticsJob>(
+            "refresh-champion-analytics",
+            job => job.ExecuteAsync(CancellationToken.None),
+            "0 4 * * *",
+            new RecurringJobOptions { TimeZone = TimeZoneInfo.Utc });
+
         return base.StartAsync(cancellationToken);
     }
 
