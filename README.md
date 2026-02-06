@@ -119,6 +119,33 @@ Compose services:
 - Web API: `http://localhost:8080`
 - WebAdminPortal (Hangfire): `http://localhost:8081/hangfire`
 
+## Production Docker (GHCR Images)
+
+Use the production compose stack that pulls `:main` images from GHCR:
+
+- `ghcr.io/luisgon-dev/transcendencebackend-webapi:main`
+- `ghcr.io/luisgon-dev/transcendencebackend-service:main`
+- `ghcr.io/luisgon-dev/transcendencebackend-webadminportal:main`
+
+Setup:
+
+```bash
+cp .env.production.example .env.production
+# edit .env.production and set secure values (JWT_SIGNING_KEY, AUTH_BOOTSTRAP_API_KEY, GHCR_TOKEN)
+echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
+docker compose --env-file .env.production -f docker-compose.production.yml up -d
+```
+
+Included services:
+
+- PostgreSQL
+- Redis
+- Web API
+- Worker service
+- WebAdminPortal (Hangfire dashboard)
+- Dozzle logs UI (`http://localhost:9999`)
+- Watchtower auto-updater for app containers
+
 ### Run Without Docker
 
 Set secrets/config first.
@@ -176,4 +203,3 @@ Default dev URLs from launch profiles:
 
 - No automated unit/integration test projects yet.
 - Phase 5 management goals pending (health endpoints, OpenTelemetry metrics, hardened admin controls).
-
