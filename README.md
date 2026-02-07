@@ -244,6 +244,31 @@ pnpm api:gen
 pnpm api:check
 ```
 
+## Local Dev API Keys (for AppOnly endpoints)
+
+Some endpoints (e.g. live game) require `X-API-Key`. For local dev, this repo uses a bootstrap key via `Auth:BootstrapApiKey`.
+
+If you run `docker compose up`, the dev compose sets a default bootstrap key:
+
+- `AUTH_BOOTSTRAP_API_KEY=trn_bootstrap_dev_key`
+
+### Option A: Use the Bootstrap Key (simplest)
+
+Set in `apps/web/.env.local`:
+
+- `TRN_BACKEND_API_KEY=trn_bootstrap_dev_key`
+
+### Option B: Create a Dedicated API Key
+
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/keys" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: trn_bootstrap_dev_key" \
+  -d '{"name":"web-dev"}'
+```
+
+Copy `plaintextKey` from the response into `apps/web/.env.local` as `TRN_BACKEND_API_KEY`.
+
 ## Known Gaps
 
 - No automated unit/integration test projects yet.

@@ -301,6 +301,12 @@ yarn-error.log*
 packages/**/node_modules/
 packages/**/dist/
 
+# Next.js env overrides (local only)
+.env.local
+.env.*.local
+apps/**/.env.local
+apps/**/.env.*.local
+
 # Visual Studio 6 build log
 *.plg
 
