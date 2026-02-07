@@ -104,6 +104,7 @@ Bootstrap access for key management can be configured with:
 - PostgreSQL 16+
 - Redis 7+
 - Riot API key
+- Node.js (recommended: Node 22+) + pnpm (for the web frontend)
 
 ### Recommended: Docker Compose
 
@@ -144,7 +145,6 @@ Included services:
 - Worker service
 - WebAdminPortal (Hangfire dashboard)
 - Dozzle logs UI (`http://localhost:9999`)
-- Watchtower auto-updater for app containers
 
 ### Run Without Docker
 
@@ -198,6 +198,75 @@ Default dev URLs from launch profiles:
 
 - Web API: `https://localhost:7053` (also `http://localhost:5092`)
 - WebAdminPortal: `https://localhost:7206` (also `http://localhost:5033`)
+
+## Web Frontend (Next.js)
+
+This repo now includes a monorepo web frontend at `apps/web` and a generated OpenAPI TypeScript client at `packages/api-client`.
+
+### Quick Start
+
+1. Start backend dependencies and the API:
+
+```bash
+docker compose up --build
+```
+
+2. Install frontend dependencies (repo root):
+
+```bash
+pnpm install
+```
+
+3. Configure the web app env:
+
+```bash
+cp apps/web/.env.example apps/web/.env.local
+# edit apps/web/.env.local:
+# - TRN_BACKEND_BASE_URL=http://localhost:8080
+# - TRN_BACKEND_API_KEY=<an app API key for AppOnly endpoints like live-game>
+```
+
+4. Run the web app:
+
+```bash
+pnpm web:dev
+```
+
+Web dev server: `http://localhost:3000`
+
+## OpenAPI Spec + Client Generation
+
+The OpenAPI spec is exported from `Transcendence.WebAPI` into `openapi/transcendence.v1.json`, and the TypeScript schema is generated into `packages/api-client/src/schema.ts`.
+
+```bash
+pnpm api:gen
+pnpm api:check
+```
+
+## Local Dev API Keys (for AppOnly endpoints)
+
+Some endpoints (e.g. live game) require `X-API-Key`. For local dev, this repo uses a bootstrap key via `Auth:BootstrapApiKey`.
+
+If you run `docker compose up`, the dev compose sets a default bootstrap key:
+
+- `AUTH_BOOTSTRAP_API_KEY=trn_bootstrap_dev_key`
+
+### Option A: Use the Bootstrap Key (simplest)
+
+Set in `apps/web/.env.local`:
+
+- `TRN_BACKEND_API_KEY=trn_bootstrap_dev_key`
+
+### Option B: Create a Dedicated API Key
+
+```bash
+curl -sS -X POST "http://localhost:8080/api/auth/keys" \
+  -H "Content-Type: application/json" \
+  -H "X-API-Key: trn_bootstrap_dev_key" \
+  -d '{"name":"web-dev"}'
+```
+
+Copy `plaintextKey` from the response into `apps/web/.env.local` as `TRN_BACKEND_API_KEY`.
 
 ## Known Gaps
 
