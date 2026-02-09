@@ -11,7 +11,7 @@ import {
 import { getBackendBaseUrl } from "@/lib/env";
 import { getTrnClient } from "@/lib/trnClient";
 
-async function refreshAccessToken() {
+async function refreshAccessToken(): Promise<string | null> {
   const { refreshToken } = await getAuthCookies();
   if (!refreshToken) return null;
 
@@ -23,7 +23,7 @@ async function refreshAccessToken() {
   if (!data) return null;
   const token = data as AuthTokenResponse;
   await setAuthCookies(token);
-  return token.accessToken;
+  return token.accessToken ?? null;
 }
 
 async function proxy(req: NextRequest, path: string[]) {
