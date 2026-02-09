@@ -87,6 +87,10 @@ type AcceptedResponse = {
   poll?: string;
 };
 
+function isRecord(v: unknown): v is Record<string, unknown> {
+  return typeof v === "object" && v !== null;
+}
+
 type ChampionStatic = {
   version: string;
   champions: Record<string, { id: string; name: string }>;
@@ -167,12 +171,21 @@ export function SummonerProfileClient({
     }
 
     if (res.status === 202) {
-      const acc = json as AcceptedResponse;
-      setAccepted(acc);
-      if (acc.retryAfterSeconds) {
-        setPollDelayMs((d) =>
-          computeNextPollDelayMs(d, acc.retryAfterSeconds)
-        );
+      const acc: AcceptedResponse | null = isRecord(json)
+        ? {
+            message:
+              typeof json.message === "string" ? (json.message as string) : undefined,
+            poll: typeof json.poll === "string" ? (json.poll as string) : undefined,
+            retryAfterSeconds:
+              typeof json.retryAfterSeconds === "number"
+                ? (json.retryAfterSeconds as number)
+                : undefined
+          }
+        : null;
+
+      setAccepted(acc ?? { message: "Refresh in process." });
+      if (acc && Number.isFinite(acc.retryAfterSeconds)) {
+        setPollDelayMs((d) => computeNextPollDelayMs(d, acc.retryAfterSeconds));
       }
       return;
     }

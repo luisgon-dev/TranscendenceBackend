@@ -18,6 +18,10 @@ function resolveApiKey() {
 async function handler(req: NextRequest, ctx: { params: { path: string[] } }) {
   const key = resolveApiKey();
   if (!key.ok) {
+    console.error("Missing backend API key for AppOnly proxy:", key.value);
+    if (process.env.NODE_ENV === "production") {
+      return NextResponse.json({ message: "Service unavailable." }, { status: 503 });
+    }
     return NextResponse.json({ message: key.value }, { status: 500 });
   }
 

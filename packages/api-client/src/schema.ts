@@ -551,7 +551,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["AuthMeResponse"];
+                        "application/json": components["schemas"]["AuthMeResponse"];
+                        "text/json": components["schemas"]["AuthMeResponse"];
+                    };
                 };
                 /** @description Unauthorized */
                 401: {
@@ -890,7 +894,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["SummonerAcceptedResponse"];
+                        "application/json": components["schemas"]["SummonerAcceptedResponse"];
+                        "text/json": components["schemas"]["SummonerAcceptedResponse"];
+                    };
                 };
                 /** @description Bad Request */
                 400: {
@@ -940,7 +948,11 @@ export interface paths {
                     headers: {
                         [name: string]: unknown;
                     };
-                    content?: never;
+                    content: {
+                        "text/plain": components["schemas"]["SummonerAcceptedResponse"];
+                        "application/json": components["schemas"]["SummonerAcceptedResponse"];
+                        "text/json": components["schemas"]["SummonerAcceptedResponse"];
+                    };
                 };
                 /** @description Bad Request */
                 400: {
@@ -1468,6 +1480,12 @@ export interface components {
             /** Format: date-time */
             lastUsedAt?: string | null;
         };
+        AuthMeResponse: {
+            subject?: string | null;
+            name?: string | null;
+            roles?: string[] | null;
+            authType?: string | null;
+        };
         AuthTokenResponse: {
             accessToken?: string | null;
             refreshToken?: string | null;
@@ -1859,6 +1877,12 @@ export interface components {
             losses?: number;
             /** Format: double */
             winRate?: number;
+        };
+        SummonerAcceptedResponse: {
+            message?: string | null;
+            poll?: string | null;
+            /** Format: int32 */
+            retryAfterSeconds?: number | null;
         };
         SummonerOverviewDto: {
             /** Format: uuid */

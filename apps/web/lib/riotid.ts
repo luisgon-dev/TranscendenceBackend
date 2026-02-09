@@ -23,7 +23,13 @@ export function encodeRiotIdPath({ gameName, tagLine }: RiotId) {
 }
 
 export function decodeRiotIdPath(riotIdPath: string): RiotId | null {
-  const decoded = decodeURIComponent(riotIdPath);
+  let decoded: string;
+  try {
+    decoded = decodeURIComponent(riotIdPath);
+  } catch {
+    // Malformed percent-encoding in user-supplied path.
+    return null;
+  }
   const dashIdx = decoded.lastIndexOf("-");
   if (dashIdx < 1 || dashIdx === decoded.length - 1) return null;
 
@@ -33,4 +39,3 @@ export function decodeRiotIdPath(riotIdPath: string): RiotId | null {
 
   return { gameName, tagLine };
 }
-

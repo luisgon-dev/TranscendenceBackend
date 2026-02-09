@@ -19,5 +19,8 @@ describe("riotid", () => {
     const path = encodeRiotIdPath(riotId);
     expect(decodeRiotIdPath(path)).toEqual(riotId);
   });
-});
 
+  it("returns null on malformed percent-encoding", () => {
+    expect(decodeRiotIdPath("%E0%A4%A")).toBeNull();
+  });
+});
