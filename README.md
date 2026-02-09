@@ -1,12 +1,13 @@
-# Transcendence Backend
+# Transcendence (Backend + Web)
 
-Backend platform for League of Legends analytics. This repository contains a Web API, background worker, shared core/domain services, and an admin Hangfire dashboard.
+League of Legends analytics platform (backend + website). This repository contains a Web API, background worker, shared core/domain services, an admin Hangfire dashboard, and a Next.js web frontend (monorepo).
 
 ## Current Status
 
 - Project roadmap phases 1-4 are implemented (foundation, summoner profiles, champion analytics, live game, and authentication).
 - Phase 5 (management/monitoring hardening) is not implemented yet.
-- Primary stack target is `.NET 10` (`global.json` pins SDK `10.0.0`).
+- Primary stack target is `.NET 10` (`global.json` pins SDK `10.0.102`).
+- Web frontend uses SSR + Next route handlers as a BFF (session cookies + server-side API key handling).
 
 ## Tech Stack
 
@@ -18,6 +19,9 @@ Backend platform for League of Legends analytics. This repository contains a Web
 - Camille Riot API SDK
 - Swagger/OpenAPI
 - Docker + Docker Compose
+- Next.js (App Router) + Tailwind CSS
+- pnpm workspaces
+- OpenAPI TypeScript client generation (`openapi-typescript` + `openapi-fetch`)
 
 ## Solution Structure
 
@@ -28,6 +32,10 @@ Backend platform for League of Legends analytics. This repository contains a Web
 | `Transcendence.Service.Core` | Domain/application services (analytics, auth, live game, Riot integration, jobs) |
 | `Transcendence.Data` | EF Core DbContext, entities, repositories |
 | `Transcendence.WebAdminPortal` | Hangfire dashboard host |
+| `apps/web` | Next.js website (SSR + route handlers BFF) |
+| `packages/api-client` | Generated OpenAPI TypeScript client (`openapi/transcendence.v1.json` -> `src/schema.ts`) |
+| `openapi` | Committed OpenAPI spec export |
+| `scripts/openapi` | Spec export script |
 
 ## Implemented Capabilities
 
@@ -50,6 +58,15 @@ Backend platform for League of Legends analytics. This repository contains a Web
 Bootstrap access for key management can be configured with:
 
 - `Auth:BootstrapApiKey`
+
+### Web Frontend Auth Notes
+
+The web frontend uses Next.js route handlers as a BFF:
+
+- Browser talks to Next (`/api/session/*` and `/api/trn/*`)
+- Next talks to the backend (`TRN_BACKEND_BASE_URL`)
+- User session tokens are stored as HttpOnly cookies on the web domain
+- AppOnly calls (e.g. live game) add `X-API-Key` from `TRN_BACKEND_API_KEY` on the server side only
 
 ## API Endpoints (Current)
 
@@ -104,7 +121,7 @@ Bootstrap access for key management can be configured with:
 - PostgreSQL 16+
 - Redis 7+
 - Riot API key
-- Node.js (recommended: Node 22+) + pnpm (for the web frontend)
+- Node.js (recommended: Node 22) + pnpm (for the web frontend)
 
 ### Recommended: Docker Compose
 
@@ -124,6 +141,7 @@ Compose services:
 
 Use the production compose stack that pulls `:main` images from GHCR:
 
+- `ghcr.io/luisgon-dev/transcendencebackend-web:main` (Next.js web)
 - `ghcr.io/luisgon-dev/transcendencebackend-webapi:main`
 - `ghcr.io/luisgon-dev/transcendencebackend-service:main`
 - `ghcr.io/luisgon-dev/transcendencebackend-webadminportal:main`
@@ -132,7 +150,7 @@ Setup:
 
 ```bash
 cp .env.production.example .env.production
-# edit .env.production and set secure values (JWT_SIGNING_KEY, AUTH_BOOTSTRAP_API_KEY, GHCR_TOKEN)
+# edit .env.production and set secure values (JWT_SIGNING_KEY, AUTH_BOOTSTRAP_API_KEY, WEB_TRN_BACKEND_API_KEY, GHCR_TOKEN)
 echo "$GHCR_TOKEN" | docker login ghcr.io -u "$GHCR_USERNAME" --password-stdin
 docker compose --env-file .env.production -f docker-compose.production.yml up -d
 ```
@@ -141,6 +159,7 @@ Included services:
 
 - PostgreSQL
 - Redis
+- Web (Next.js): `http://localhost:3000`
 - Web API
 - Worker service
 - WebAdminPortal (Hangfire dashboard)
@@ -234,6 +253,13 @@ pnpm web:dev
 
 Web dev server: `http://localhost:3000`
 
+### Point Web At A Remote Dev API (LAN)
+
+If your backend is running elsewhere (example: `192.168.0.221:8080`), set in `apps/web/.env.local`:
+
+- `TRN_BACKEND_BASE_URL=http://192.168.0.221:8080`
+- `TRN_BACKEND_API_KEY=<api key for AppOnly endpoints>`
+
 ## OpenAPI Spec + Client Generation
 
 The OpenAPI spec is exported from `Transcendence.WebAPI` into `openapi/transcendence.v1.json`, and the TypeScript schema is generated into `packages/api-client/src/schema.ts`.
@@ -242,6 +268,8 @@ The OpenAPI spec is exported from `Transcendence.WebAPI` into `openapi/transcend
 pnpm api:gen
 pnpm api:check
 ```
+
+Note: `api:gen` requires .NET because it builds the WebAPI assembly and uses the Swashbuckle CLI (`dotnet swagger tofile`) to export the spec.
 
 ## Local Dev API Keys (for AppOnly endpoints)
 
