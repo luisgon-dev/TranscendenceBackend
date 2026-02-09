@@ -1,15 +1,12 @@
 import { cookies } from "next/headers";
 
+import type { components } from "@transcendence/api-client/schema";
+
 export const ACCESS_TOKEN_COOKIE = "trn_access_token";
 export const REFRESH_TOKEN_COOKIE = "trn_refresh_token";
 export const ACCESS_EXPIRES_AT_COOKIE = "trn_access_expires_at";
 
-export type AuthTokenResponse = {
-  accessToken: string;
-  refreshToken: string;
-  accessTokenExpiresAtUtc: string;
-  tokenType?: string;
-};
+export type AuthTokenResponse = components["schemas"]["AuthTokenResponse"];
 
 export async function getAuthCookies() {
   const store = await cookies();
@@ -23,6 +20,16 @@ export async function getAuthCookies() {
 export async function setAuthCookies(token: AuthTokenResponse) {
   const store = await cookies();
   const secure = process.env.NODE_ENV === "production";
+
+  // The OpenAPI spec marks some fields nullable. Backend should always send them; guard anyway.
+  if (
+    !token?.accessToken ||
+    !token?.refreshToken ||
+    !token?.accessTokenExpiresAtUtc
+  ) {
+    throw new Error("Invalid auth token response.");
+  }
+
   const accessExpires = new Date(token.accessTokenExpiresAtUtc);
   const accessCookieBase = {
     httpOnly: true as const,

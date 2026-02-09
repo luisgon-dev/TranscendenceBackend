@@ -9,19 +9,19 @@ import {
   type AuthTokenResponse
 } from "@/lib/authCookies";
 import { getBackendBaseUrl } from "@/lib/env";
+import { getTrnClient } from "@/lib/trnClient";
 
 async function refreshAccessToken() {
   const { refreshToken } = await getAuthCookies();
   if (!refreshToken) return null;
 
-  const res = await fetch(`${getBackendBaseUrl()}/api/auth/refresh`, {
-    method: "POST",
-    headers: { "content-type": "application/json" },
-    body: JSON.stringify({ refreshToken })
+  const client = getTrnClient();
+  const { data } = await client.POST("/api/auth/refresh", {
+    body: { refreshToken }
   });
 
-  if (!res.ok) return null;
-  const token = (await res.json()) as AuthTokenResponse;
+  if (!data) return null;
+  const token = data as AuthTokenResponse;
   await setAuthCookies(token);
   return token.accessToken;
 }
