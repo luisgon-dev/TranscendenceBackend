@@ -37,8 +37,7 @@ export function SearchBar({ className }: { className?: string }) {
     []
   );
 
-  function onSubmit(e: React.FormEvent) {
-    e.preventDefault();
+  function submitSearch() {
     setError(null);
 
     // Convenience: allow paste of "GameName#TAG" into the game name field.
@@ -60,8 +59,14 @@ export function SearchBar({ className }: { className?: string }) {
   }
 
   return (
-    <form
-      onSubmit={onSubmit}
+    <div
+      role="search"
+      onKeyDown={(e) => {
+        if (e.key === "Enter") {
+          e.preventDefault();
+          submitSearch();
+        }
+      }}
       className={cn(
         "flex w-full min-w-0 flex-col gap-2 lg:flex-row lg:items-center",
         className
@@ -105,9 +110,11 @@ export function SearchBar({ className }: { className?: string }) {
       </div>
 
       <div className="flex items-center gap-2">
-        <Button type="submit">Search</Button>
+        <Button type="button" onClick={submitSearch}>
+          Search
+        </Button>
         {error ? <p className="text-sm text-red-300">{error}</p> : null}
       </div>
-    </form>
+    </div>
   );
 }

@@ -3,78 +3,57 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 
-import { SearchBar } from "@/components/SearchBar";
-import { Button } from "@/components/ui/Button";
+import { BrandMark } from "@/components/BrandMark";
+import { GlobalSearchLauncher } from "@/components/GlobalSearchLauncher";
 import { cn } from "@/lib/cn";
 
 const COMPACT_HEADER_PATHS = new Set(["/account/login", "/account/register"]);
-
-function openGlobalSearch() {
-  window.dispatchEvent(new Event("trn:open-command-palette"));
-}
 
 export function SiteHeaderClient({ children }: { children: React.ReactNode }) {
   const pathname = usePathname();
   const compact = pathname ? COMPACT_HEADER_PATHS.has(pathname) : false;
 
   return (
-    <header className="sticky top-0 z-40 border-b border-border/60 bg-bg/70 backdrop-blur">
-      <div
-        className={cn(
-          "mx-auto flex max-w-6xl flex-col gap-3 px-4 py-3",
-          compact ? "sm:flex-row sm:items-center sm:justify-between" : null
-        )}
-      >
-        <div className="flex items-center justify-between gap-3">
-          <Link href="/" className="group inline-flex items-center gap-2">
-            <span className="h-8 w-8 rounded-lg bg-gradient-to-br from-primary to-primary-2 shadow-glass" />
+    <header className="sticky top-0 z-40 border-b border-border/55 bg-bg/80 backdrop-blur-md">
+      <div className="mx-auto grid max-w-6xl gap-3 px-4 py-3">
+        <div className="flex items-center gap-3">
+          <Link href="/" className="group inline-flex shrink-0 items-center gap-2">
+            <BrandMark className="h-8 w-8" />
             <span className="text-sm font-semibold tracking-wide text-fg">
               Transcendence
             </span>
           </Link>
 
-          <nav className="hidden items-center gap-4 sm:flex">
-            <Link href="/tierlist" className="text-sm text-fg/80 hover:text-fg">
+          <nav className="ml-3 hidden items-center gap-5 md:flex">
+            <Link href="/tierlist" className="text-sm text-fg/70 transition hover:text-fg">
               Tier List
             </Link>
-            <Link href="/champions" className="text-sm text-fg/80 hover:text-fg">
+            <Link href="/champions" className="text-sm text-fg/70 transition hover:text-fg">
               Champions
             </Link>
           </nav>
+
+          <div className="ml-auto flex min-w-0 items-center gap-2">
+            <GlobalSearchLauncher
+              variant="header"
+              size="sm"
+              className={cn(
+                "h-9 min-w-[148px]",
+                compact ? "max-w-[230px]" : "max-w-[220px]"
+              )}
+            />
+            <div className="shrink-0">{children}</div>
+          </div>
         </div>
 
-        {compact ? (
-          <div className="flex flex-wrap items-center justify-end gap-2">
-            <Button
-              type="button"
-              variant="outline"
-              size="sm"
-              className="h-9 min-w-[150px] justify-between text-fg/80"
-              onClick={openGlobalSearch}
-            >
-              Quick Search
-              <span className="text-xs text-muted">Ctrl/Cmd+K</span>
-            </Button>
-            <div className="shrink-0">{children}</div>
-          </div>
-        ) : (
-          <div className="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
-            <div className="flex min-w-0 flex-col gap-2 sm:flex-row sm:items-center">
-              <Button
-                type="button"
-                variant="outline"
-                size="sm"
-                className="h-11 min-w-[176px] justify-between text-fg/80"
-                onClick={openGlobalSearch}
-              >
-                Quick Search
-                <span className="text-xs text-muted">Ctrl/Cmd+K</span>
-              </Button>
-              <SearchBar className="min-w-0 flex-1 md:max-w-[560px]" />
-            </div>
-            <div className="shrink-0">{children}</div>
-          </div>
-        )}
+        <nav className="flex items-center gap-4 border-t border-border/40 pt-2 md:hidden">
+          <Link href="/tierlist" className="text-sm text-fg/70 transition hover:text-fg">
+            Tier List
+          </Link>
+          <Link href="/champions" className="text-sm text-fg/70 transition hover:text-fg">
+            Champions
+          </Link>
+        </nav>
       </div>
     </header>
   );

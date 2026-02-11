@@ -4,6 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 
 import { clearAuthCookies, setAuthCookies, type AuthTokenResponse } from "@/lib/authCookies";
+import { logEvent } from "@/lib/serverLog";
 import { getTrnClient } from "@/lib/trnClient";
 
 type AuthActionState = {
@@ -33,9 +34,21 @@ async function authenticate(
   }
 
   const client = getTrnClient();
-  const { data, error, response } = await client.POST(endpoint, {
-    body: { email, password }
-  });
+  let data: unknown;
+  let error: unknown;
+  let response: { status: number };
+
+  try {
+    const result = await client.POST(endpoint, {
+      body: { email, password }
+    });
+    data = result.data;
+    error = result.error;
+    response = result.response;
+  } catch (caught: unknown) {
+    logEvent("warn", "auth action backend request failed", { endpoint, error: caught });
+    return { error: "Authentication service unavailable." };
+  }
 
   if (!data) {
     const message =

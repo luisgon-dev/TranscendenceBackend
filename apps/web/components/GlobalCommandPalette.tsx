@@ -4,6 +4,7 @@ import { Command } from "cmdk";
 import { useRouter } from "next/navigation";
 import { useEffect, useMemo, useRef, useState } from "react";
 
+import { GLOBAL_SEARCH_OPEN_EVENT } from "@/lib/globalSearch";
 import { encodeRiotIdPath, parseRiotIdInput } from "@/lib/riotid";
 
 type ChampionSearchItem = {
@@ -15,7 +16,6 @@ type ChampionsResponse = {
   champions: Record<string, { id: string; name: string }>;
 };
 
-const OPEN_EVENT = "trn:open-command-palette";
 const REGIONS = [
   { value: "na", label: "NA" },
   { value: "euw", label: "EUW" },
@@ -91,10 +91,10 @@ export function GlobalCommandPalette() {
     }
 
     window.addEventListener("keydown", onKeyDown);
-    window.addEventListener(OPEN_EVENT, onOpenEvent);
+    window.addEventListener(GLOBAL_SEARCH_OPEN_EVENT, onOpenEvent);
     return () => {
       window.removeEventListener("keydown", onKeyDown);
-      window.removeEventListener(OPEN_EVENT, onOpenEvent);
+      window.removeEventListener(GLOBAL_SEARCH_OPEN_EVENT, onOpenEvent);
     };
   }, [open]);
 
