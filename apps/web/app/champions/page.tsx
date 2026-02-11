@@ -2,10 +2,46 @@ import Image from "next/image";
 import Link from "next/link";
 
 import { Card } from "@/components/ui/Card";
+import { fetchBackendJson } from "@/lib/backendCall";
+import { getBackendBaseUrl } from "@/lib/env";
 import { fetchChampionMap, championIconUrl } from "@/lib/staticData";
 
+type TierListEntry = {
+  championId: number;
+  role: string;
+  games: number;
+};
+
+type TierListResponse = {
+  entries: TierListEntry[];
+};
+
+const ROLES = ["TOP", "JUNGLE", "MIDDLE", "BOTTOM", "UTILITY"] as const;
+
 export default async function ChampionsPage() {
-  const { version, champions } = await fetchChampionMap();
+  const [{ version, champions }, ...tierResults] = await Promise.all([
+    fetchChampionMap(),
+    ...ROLES.map((role) =>
+      fetchBackendJson<TierListResponse>(
+        `${getBackendBaseUrl()}/api/analytics/tierlist?role=${role}`,
+        { next: { revalidate: 60 * 60 } }
+      )
+    )
+  ]);
+
+  const primaryRoleByChampion = new Map<number, { role: string; games: number }>();
+  for (const tierResult of tierResults) {
+    if (!tierResult.ok) continue;
+    for (const entry of tierResult.body!.entries) {
+      const current = primaryRoleByChampion.get(entry.championId);
+      if (!current || entry.games > current.games) {
+        primaryRoleByChampion.set(entry.championId, {
+          role: entry.role,
+          games: entry.games
+        });
+      }
+    }
+  }
 
   const list = Object.entries(champions)
     .map(([key, value]) => ({ championId: Number(key), ...value }))
@@ -38,7 +74,9 @@ export default async function ChampionsPage() {
                   <p className="truncate text-sm font-semibold text-fg group-hover:underline">
                     {c.name}
                   </p>
-                  <p className="text-xs text-muted">#{c.championId}</p>
+                  <p className="text-xs text-muted">
+                    {primaryRoleByChampion.get(c.championId)?.role ?? "No role data"}
+                  </p>
                 </div>
               </div>
             </Card>
@@ -48,4 +86,3 @@ export default async function ChampionsPage() {
     </div>
   );
 }
-

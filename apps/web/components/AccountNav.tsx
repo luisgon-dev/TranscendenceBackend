@@ -1,52 +1,11 @@
-"use client";
-
 import Link from "next/link";
-import { useEffect, useState } from "react";
 
+import { logoutAction } from "@/app/account/actions";
 import { Button } from "@/components/ui/Button";
+import { getSessionMe } from "@/lib/session";
 
-type SessionMe =
-  | { authenticated: false }
-  | {
-      authenticated: true;
-      subject: string | null;
-      name: string | null;
-      roles: string[];
-      authType: string | null;
-    };
-
-export function AccountNav() {
-  const [me, setMe] = useState<SessionMe | null>(null);
-  const [busy, setBusy] = useState(false);
-
-  async function refresh() {
-    try {
-      const res = await fetch("/api/session/me", { cache: "no-store" });
-      const json = (await res.json()) as SessionMe;
-      setMe(json);
-    } catch {
-      setMe({ authenticated: false });
-    }
-  }
-
-  useEffect(() => {
-    void refresh();
-  }, []);
-
-  async function logout() {
-    setBusy(true);
-    try {
-      await fetch("/api/session/logout", { method: "POST" });
-    } finally {
-      setBusy(false);
-      await refresh();
-    }
-  }
-
-  if (!me) {
-    return <div className="h-10 w-[200px]" />;
-  }
-
+export async function AccountNav() {
+  const me = await getSessionMe();
   if (!me.authenticated) {
     return (
       <div className="flex items-center gap-2">
@@ -71,10 +30,11 @@ export function AccountNav() {
       >
         Favorites
       </Link>
-      <Button variant="ghost" size="sm" onClick={logout} disabled={busy}>
-        Logout
-      </Button>
+      <form action={logoutAction}>
+        <Button variant="ghost" size="sm" type="submit">
+          Logout
+        </Button>
+      </form>
     </div>
   );
 }
-

@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Manrope, Sora } from "next/font/google";
 
 import "@/app/globals.css";
+import { GlobalCommandPalette } from "@/components/GlobalCommandPalette";
 import { SiteHeader } from "@/components/SiteHeader";
 
 const sora = Sora({
@@ -31,8 +32,8 @@ export default function RootLayout({
       <body className="noise bg-aurora font-[var(--font-manrope)]">
         <SiteHeader />
         <main className="mx-auto max-w-6xl px-4 py-10">{children}</main>
+        <GlobalCommandPalette />
       </body>
     </html>
   );
 }
-
