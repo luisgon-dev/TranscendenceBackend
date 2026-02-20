@@ -1,10 +1,10 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Transcendence.Data;
 using Transcendence.Data.Models.LoL.Match;
 using Transcendence.Service.Core.Services.Analytics.Interfaces;
 using Transcendence.Service.Core.Services.Analytics.Models;
-using Transcendence.Service.Core.Services.StaticData.Interfaces;
 
 namespace Transcendence.Service.Core.Services.Analytics.Implementations;
 
@@ -17,16 +17,16 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
     private const int MatchupsToShow = 5;
     private readonly TranscendenceContext _context;
     private readonly ChampionAnalyticsComputeOptions _options;
-    private readonly IStaticDataService _staticDataService;
+    private readonly ILogger<ChampionAnalyticsComputeService> _logger;
 
     public ChampionAnalyticsComputeService(
         TranscendenceContext context,
         IOptions<ChampionAnalyticsComputeOptions> options,
-        IStaticDataService staticDataService)
+        ILogger<ChampionAnalyticsComputeService> logger)
     {
         _context = context;
         _options = options.Value;
-        _staticDataService = staticDataService;
+        _logger = logger;
     }
 
     /// <summary>
@@ -396,8 +396,21 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
         "Vision"
     };
 
+    // Used only when item metadata coverage is incomplete for the active patch.
+    private static readonly HashSet<int> LegacyExcludedBuildItems = new()
+    {
+        // Trinkets and wards
+        3340, 3363, 3364, 2055,
+        // Consumables
+        2003, 2010, 2031, 2033, 2138, 2139, 2140,
+        // Starter and component items
+        1001, 1004, 1011, 1018, 1026, 1027, 1028, 1029, 1031, 1033, 1035, 1036, 1037, 1038, 1042, 1043,
+        1052, 1053, 1054, 1055, 1056, 1057, 1058, 1082, 1083, 2420, 2421, 2422, 3024, 3052, 3070
+    };
+
     private const double CoreItemThreshold = 0.70;
     private const int MinBuildSampleSize = 30;
+    private const double ItemMetadataCoverageFallbackThreshold = 0.90;
 
     /// <summary>
     /// Computes top 3 builds for a champion with items and runes bundled.
@@ -410,8 +423,6 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
         string patch,
         CancellationToken ct)
     {
-        await _staticDataService.EnsureStaticDataForPatchAsync(patch, ct);
-
         var minimumGamesRequired = await GetAdaptiveMinimumGamesRequiredAsync(patch, ct);
         var normalizedRankTierFilter = NormalizeRankTierFilter(rankTier);
 
@@ -477,12 +488,35 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
                         iv.PriceTotal),
                     ct);
 
+        var itemMetadataCoverage = allItemIds.Count == 0
+            ? 1.0
+            : (double)itemMetadataById.Count / allItemIds.Count;
+        var useLegacyFallback = itemMetadataCoverage < ItemMetadataCoverageFallbackThreshold;
+
+        if (allItemIds.Count > 0 && itemMetadataById.Count == 0)
+        {
+            _logger.LogWarning(
+                "No item metadata found for patch {Patch} while computing builds for champion {ChampionId}/{Role}. Using legacy build-item fallback.",
+                patch,
+                championId,
+                role);
+        }
+        else if (useLegacyFallback)
+        {
+            _logger.LogWarning(
+                "Item metadata coverage is {Coverage:P1} for patch {Patch} while computing builds for champion {ChampionId}/{Role}. Using legacy build-item fallback.",
+                itemMetadataCoverage,
+                patch,
+                championId,
+                role);
+        }
+
         var buildEligibleMatches = matchData
             .Select(m => new
             {
                 m.Win,
                 Runes = m.Runes,
-                Items = NormalizeCompletedBuildItems(m.Items, itemMetadataById)
+                Items = NormalizeCompletedBuildItems(m.Items, itemMetadataById, useLegacyFallback)
             })
             .Where(m => m.Items.Count > 0)
             .ToList();
@@ -598,7 +632,8 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
 
     private static List<int> NormalizeCompletedBuildItems(
         IReadOnlyList<int> itemIds,
-        IReadOnlyDictionary<int, BuildItemMetadata> itemMetadataById)
+        IReadOnlyDictionary<int, BuildItemMetadata> itemMetadataById,
+        bool useLegacyFallback)
     {
         var filtered = new List<int>(itemIds.Count);
         foreach (var itemId in itemIds)
@@ -606,10 +641,19 @@ public class ChampionAnalyticsComputeService : IChampionAnalyticsComputeService
             if (itemId == 0)
                 continue;
 
-            if (!itemMetadataById.TryGetValue(itemId, out var metadata))
+            if (itemMetadataById.TryGetValue(itemId, out var metadata))
+            {
+                if (!IsCompletedBuildItem(metadata))
+                    continue;
+
+                filtered.Add(itemId);
+                continue;
+            }
+
+            if (!useLegacyFallback)
                 continue;
 
-            if (!IsCompletedBuildItem(metadata))
+            if (LegacyExcludedBuildItems.Contains(itemId))
                 continue;
 
             filtered.Add(itemId);

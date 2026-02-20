@@ -72,6 +72,7 @@ When `Api:ReturnProblemDetailsOnStatsFailure=true`, stats endpoints return `500`
 - `primaryStyleId`, `subStyleId`
 - `primaryRunes` (4), `subRunes` (2), `statShards` (3)
 - Build item lists include only completed, build-impact items (no components, trinkets, wards, or consumables).
+- If patch item metadata is temporarily incomplete, the service uses a legacy exclusion fallback so builds still render while metadata refresh catches up.
 
 ### Live Game (`AppOnly`)
 

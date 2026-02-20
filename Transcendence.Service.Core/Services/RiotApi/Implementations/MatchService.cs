@@ -62,16 +62,32 @@ public class MatchService(
             platformRoute,
             cancellationToken);
 
+        var missingPuuidParticipants = info.Participants.Count(p => string.IsNullOrWhiteSpace(p.Puuid));
+        var unresolvedPuuids = info.Participants
+            .Select(p => p.Puuid)
+            .Where(puuid => !string.IsNullOrWhiteSpace(puuid))
+            .Select(puuid => puuid!)
+            .Distinct(StringComparer.Ordinal)
+            .Where(puuid => !summonersByPuuid.ContainsKey(puuid))
+            .ToList();
+
+        if (missingPuuidParticipants > 0 || unresolvedPuuids.Count > 0)
+        {
+            logger.LogWarning(
+                "Aborting match {MatchId} preparation due to unresolved participants. MissingPuuidParticipants={MissingCount}, UnresolvedPuuids={UnresolvedCount}, Sample={UnresolvedSample}",
+                matchId,
+                missingPuuidParticipants,
+                unresolvedPuuids.Count,
+                unresolvedPuuids.Take(5).ToArray());
+
+            throw new InvalidOperationException(
+                $"Unable to resolve all participants for match {matchId}. MissingPuuidParticipants={missingPuuidParticipants}, UnresolvedPuuids={unresolvedPuuids.Count}.");
+        }
+
         // Ensure Summoners exist, build participants and relationships
         foreach (var p in info.Participants)
         {
-            if (string.IsNullOrWhiteSpace(p.Puuid) || !summonersByPuuid.TryGetValue(p.Puuid, out var summoner))
-            {
-                logger.LogWarning(
-                    "Skipping participant with unresolved PUUID in match {MatchId}.",
-                    matchId);
-                continue;
-            }
+            var summoner = summonersByPuuid[p.Puuid!];
 
             // Link summoner to this match (many-to-many)
             if (match.Summoners.All(s => s.Id != summoner.Id)) match.Summoners.Add(summoner);
@@ -103,6 +119,13 @@ public class MatchService(
             participant.Items = CreateMatchParticipantItems(p, match.Patch);
 
             match.Participants.Add(participant);
+        }
+
+        var expectedParticipants = info.Participants.Count();
+        if (match.Participants.Count != expectedParticipants)
+        {
+            throw new InvalidOperationException(
+                $"Participant integrity check failed for match {matchId}. Expected {expectedParticipants} participants, resolved {match.Participants.Count}.");
         }
 
         logger.LogInformation("Prepared match {MatchId} with {Count} participants for persistence.", matchId,
@@ -304,16 +327,32 @@ public class MatchService(
                 platformRoute,
                 cancellationToken);
 
+            var missingPuuidParticipants = info.Participants.Count(p => string.IsNullOrWhiteSpace(p.Puuid));
+            var unresolvedPuuids = info.Participants
+                .Select(p => p.Puuid)
+                .Where(puuid => !string.IsNullOrWhiteSpace(puuid))
+                .Select(puuid => puuid!)
+                .Distinct(StringComparer.Ordinal)
+                .Where(puuid => !summonersByPuuid.ContainsKey(puuid))
+                .ToList();
+
+            if (missingPuuidParticipants > 0 || unresolvedPuuids.Count > 0)
+            {
+                logger.LogWarning(
+                    "Aborting retry match fetch {MatchId} due to unresolved participants. MissingPuuidParticipants={MissingCount}, UnresolvedPuuids={UnresolvedCount}, Sample={UnresolvedSample}",
+                    matchId,
+                    missingPuuidParticipants,
+                    unresolvedPuuids.Count,
+                    unresolvedPuuids.Take(5).ToArray());
+
+                throw new InvalidOperationException(
+                    $"Unable to resolve all participants for retry match fetch {matchId}. MissingPuuidParticipants={missingPuuidParticipants}, UnresolvedPuuids={unresolvedPuuids.Count}.");
+            }
+
             // Ensure Summoners exist, build participants and relationships
             foreach (var p in info.Participants)
             {
-                if (string.IsNullOrWhiteSpace(p.Puuid) || !summonersByPuuid.TryGetValue(p.Puuid, out var summoner))
-                {
-                    logger.LogWarning(
-                        "Skipping participant with unresolved PUUID in retry match fetch {MatchId}.",
-                        matchId);
-                    continue;
-                }
+                var summoner = summonersByPuuid[p.Puuid!];
 
                 if (match.Summoners.All(s => s.Id != summoner.Id)) match.Summoners.Add(summoner);
 
@@ -345,6 +384,13 @@ public class MatchService(
                 match.Participants.Add(participant);
             }
 
+            var expectedParticipants = info.Participants.Count();
+            if (match.Participants.Count != expectedParticipants)
+            {
+                throw new InvalidOperationException(
+                    $"Participant integrity check failed for retry match fetch {matchId}. Expected {expectedParticipants} participants, resolved {match.Participants.Count}.");
+            }
+
             match.Status = FetchStatus.Success;
             match.FetchedAt = DateTime.UtcNow;
             match.LastErrorMessage = null;
@@ -358,6 +404,10 @@ public class MatchService(
 
             logger.LogInformation("Successfully fetched match {MatchId}", matchId);
             return true;
+        }
+        catch (OperationCanceledException)
+        {
+            throw;
         }
         catch (Exception ex)
         {
@@ -447,6 +497,10 @@ public class MatchService(
                 var summoner = await summonerService.GetSummonerByPuuidAsync(puuid, platformRoute, cancellationToken);
                 await summonerRepository.AddOrUpdateSummonerAsync(summoner, cancellationToken);
                 existingSummoners[puuid] = summoner;
+            }
+            catch (OperationCanceledException)
+            {
+                throw;
             }
             catch (Exception ex)
             {

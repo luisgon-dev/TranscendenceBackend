@@ -93,6 +93,8 @@ Transcendence is a backend + web monorepo:
 - Match participant items are persisted with explicit `SlotIndex` (0-6) plus `ItemId`.
 - This preserves final inventory order and allows duplicate item IDs in different slots.
 - Champion build analytics post-processes persisted items against static item metadata and only counts completed, in-store, build-impact items (filters out components/trinkets/wards/consumables).
+- Build endpoint requests do not trigger static-data network refresh; patch item metadata is refreshed by background jobs.
+- If metadata coverage is temporarily incomplete for a patch, analytics uses a legacy exclusion fallback to avoid empty build responses.
 
 ## Web Auth Boundary (BFF)
 
