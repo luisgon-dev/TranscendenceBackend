@@ -71,6 +71,7 @@ When `Api:ReturnProblemDetailsOnStatsFailure=true`, stats endpoints return `500`
 `GET /api/analytics/champions/{championId}/builds` includes full rune setup per build:
 - `primaryStyleId`, `subStyleId`
 - `primaryRunes` (4), `subRunes` (2), `statShards` (3)
+- Build item lists include only completed, build-impact items (no components, trinkets, wards, or consumables).
 
 ### Live Game (`AppOnly`)
 
