@@ -94,6 +94,10 @@ corepack pnpm web:lint
 corepack pnpm web:build
 ```
 
+Current `web:test` scope:
+- Utility/unit tests in `apps/web/lib/*.test.ts`
+- Runs in Vitest `node` environment (no DOM harness needed for current test suite)
+
 ## OpenAPI + TypeScript Client
 
 Source of truth: `openapi/transcendence.v1.json`

@@ -35,6 +35,11 @@ Transcendence is a backend + web monorepo:
   - `/api/session/*` for browser auth/session interactions
   - `/api/trn/*` as proxy endpoints to backend (adds auth headers server-side)
 - Tailwind styling, SSR-first pages where possible
+- Frontend analysis routes:
+  - `/tierlist`
+  - `/champions/*`
+  - `/matchups/*`
+  - `/pro-builds/*` (currently includes intentional preview stubs where backend data is pending)
 
 ### `packages/api-client`
 - Generated OpenAPI TypeScript client artifacts
@@ -103,3 +108,9 @@ Backend uses a layered approach (see source and README):
 
 - HybridCache (L1 in-memory + L2 Redis) for derived stats/analytics
 - Persistent storage (PostgreSQL) for canonical match/summoner data
+
+## Frontend Overhaul Follow-Ups
+
+Backend work needed to fully unlock new frontend pages is tracked here:
+
+- `docs/BACKEND_TASKS_FRONTEND_OVERHAUL.md`

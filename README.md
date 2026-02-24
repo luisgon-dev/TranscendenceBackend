@@ -42,6 +42,8 @@ This project is meant to demonstrate practical backend and full-stack engineerin
 - Global command/search experience for champions, summoners, and tier list
 - Tier list page with role and rank tier filters
 - Champion index and champion detail pages
+- Matchup analysis pages (`/matchups`, `/matchups/[championId]`)
+- Pro builds preview pages (`/pro-builds`, `/pro-builds/[championId]`)
 - Champion detail includes:
   - win rates by role/tier
   - top builds
@@ -172,6 +174,7 @@ Frontend typing:
 - `docs/DEVELOPMENT.md`: setup, environment, jobs, and operational runbooks
 - `docs/API.md`: auth model, endpoint map, and contract workflow
 - `docs/ARCHITECTURE.md`: system boundaries, data flow, and job orchestration
+- `docs/BACKEND_TASKS_FRONTEND_OVERHAUL.md`: backend follow-ups required to remove frontend placeholders
 - `CLAUDE.md` / `AGENTS.md`: agent-specific workflow guidance
 
 

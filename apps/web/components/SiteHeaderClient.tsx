@@ -46,6 +46,12 @@ export function SiteHeaderClient({
             <Link href="/champions" className={navLinkClass(pathname, "/champions")}>
               Champions
             </Link>
+            <Link href="/matchups" className={navLinkClass(pathname, "/matchups")}>
+              Matchups
+            </Link>
+            <Link href="/pro-builds" className={navLinkClass(pathname, "/pro-builds")}>
+              Pro Builds
+            </Link>
             {patch ? (
               <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
                 {patch}
@@ -75,12 +81,18 @@ export function SiteHeaderClient({
           </div>
         </div>
 
-        <nav className="flex items-center gap-4 border-t border-border/40 pt-2 md:hidden">
+        <nav className="flex flex-wrap items-center gap-3 border-t border-border/40 pt-2 md:hidden">
           <Link href="/tierlist" className={navLinkClass(pathname, "/tierlist")}>
             Tier List
           </Link>
           <Link href="/champions" className={navLinkClass(pathname, "/champions")}>
             Champions
+          </Link>
+          <Link href="/matchups" className={navLinkClass(pathname, "/matchups")}>
+            Matchups
+          </Link>
+          <Link href="/pro-builds" className={navLinkClass(pathname, "/pro-builds")}>
+            Pro
           </Link>
           {patch ? (
             <span className="rounded-full border border-primary/40 bg-primary/10 px-2 py-0.5 text-[11px] font-medium text-primary">
