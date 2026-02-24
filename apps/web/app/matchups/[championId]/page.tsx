@@ -167,8 +167,8 @@ export default async function MatchupAnalysisPage({
 
   return (
     <div className="grid gap-6">
-      <header className="grid gap-3">
-        <div className="flex items-center gap-3">
+      <header className="glass-card mesh-highlight grid gap-3 rounded-3xl p-5 md:p-6">
+        <div className="flex flex-wrap items-center gap-3">
           <Image
             src={championIconUrl(version, champion?.id ?? "Unknown")}
             alt={championName}

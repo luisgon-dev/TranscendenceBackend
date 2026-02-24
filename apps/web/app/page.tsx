@@ -43,14 +43,14 @@ export default async function HomePage() {
 
   return (
     <div className="grid gap-6">
-      <section className="relative overflow-hidden rounded-2xl border border-border/65 bg-surface/45 p-6 shadow-glass sm:p-8">
+      <section className="glass-card mesh-highlight relative overflow-hidden rounded-[2rem] p-6 sm:p-8">
         <div className="pointer-events-none absolute -left-24 top-0 h-56 w-56 rounded-full bg-primary/20 blur-3xl" />
         <div className="pointer-events-none absolute -bottom-24 right-0 h-56 w-56 rounded-full bg-primary-2/20 blur-3xl" />
 
         <div className="relative">
           <div className="flex flex-wrap items-center gap-2">
             <Badge className="border-primary/40 bg-primary/10 text-primary">Patch {patch}</Badge>
-            <Badge className="border-border/70 bg-white/[0.03] text-fg/90">Live Analysis</Badge>
+            <Badge className="border-success/40 bg-success/10 text-success">Live Analysis</Badge>
           </div>
 
           <h1 className="mt-4 max-w-2xl font-[var(--font-sora)] text-3xl font-semibold tracking-tight sm:text-4xl">
@@ -175,7 +175,7 @@ export default async function HomePage() {
             </div>
           </Card>
 
-          <Card className="border-primary/40 bg-primary/10 p-5">
+          <Card className="border-primary/45 bg-gradient-to-br from-primary/15 to-primary-2/10 p-5">
             <h2 className="font-[var(--font-sora)] text-lg font-semibold text-primary">Upgrade to Pro</h2>
             <p className="mt-2 text-sm text-fg/85">
               Pro builds and scouting are being prepared. Explore the preview and upcoming feature scope.

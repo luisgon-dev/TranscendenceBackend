@@ -49,9 +49,9 @@ This project is meant to demonstrate practical backend and full-stack engineerin
   - top builds
   - matchup tables
   - full rune setups (primary, secondary, stat shards)
-- Summoner profile with refresh workflow
-- Match history with paged results
-- Match detail view with full team tables, spells, items, and runes
+- Unified summoner profile + match history view with refresh workflow
+- Paged match history with inline expandable match details
+- Legacy `/summoners/*/matches` routes redirect to the unified summoner page state
 - Account pages for registration, login, and favorites
 
 ### Backend + Data Pipeline

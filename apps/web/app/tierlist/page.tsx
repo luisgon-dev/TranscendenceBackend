@@ -97,7 +97,7 @@ export default async function TierListPage({
 
   return (
     <div className="grid gap-6">
-      <header className="flex flex-col gap-3">
+      <header className="glass-card mesh-highlight flex flex-col gap-3 rounded-3xl p-5 md:p-6">
         <h1 className="font-[var(--font-sora)] text-3xl font-semibold tracking-tight">
           Tier List
         </h1>
@@ -166,10 +166,7 @@ export default async function TierListPage({
                       const championSubtitle = champ?.title ?? "";
 
                       return (
-                        <tr
-                          key={`${tier}-${e.role}-${e.championId}`}
-                          className="border-b border-border/20 transition hover:bg-white/[0.03]"
-                        >
+                        <tr key={`${tier}-${e.role}-${e.championId}`} className="border-b border-border/20 transition hover:bg-white/[0.06]">
                           <td className="px-4 py-2.5 text-center text-xs text-muted">
                             {rank}
                           </td>
@@ -209,7 +206,7 @@ export default async function TierListPage({
                           <td className="px-3 py-2.5 text-right text-fg/70">
                             {formatPercent(e.pickRate, { decimals: 1 })}
                           </td>
-                          <td className="px-3 py-2.5 text-right text-muted" title="Ban rate is not exposed by the current analytics API.">
+                          <td className="px-3 py-2.5 text-right text-muted" title="Ban rate is not exposed by the current analytics API yet.">
                             —
                           </td>
                           <td className="px-3 py-2.5 text-right text-fg/70">

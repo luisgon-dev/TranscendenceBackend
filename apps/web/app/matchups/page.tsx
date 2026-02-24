@@ -1,12 +1,11 @@
-import Image from "next/image";
-import Link from "next/link";
 import type { components } from "@transcendence/api-client/schema";
 
 import { Card } from "@/components/ui/Card";
+import { Badge } from "@/components/ui/Badge";
+import { MatchupsExplorerClient } from "@/components/MatchupsExplorerClient";
 import { fetchBackendJson } from "@/lib/backendCall";
 import { getBackendBaseUrl } from "@/lib/env";
-import { roleDisplayLabel } from "@/lib/roles";
-import { championIconUrl, fetchChampionMap } from "@/lib/staticData";
+import { fetchChampionMap } from "@/lib/staticData";
 import { normalizeTierListEntries } from "@/lib/tierlist";
 
 type TierListResponse = components["schemas"]["TierListResponse"];
@@ -26,51 +25,33 @@ export default async function MatchupsIndexPage() {
   const popular = tierEntries
     .slice()
     .sort((a, b) => b.games - a.games)
-    .filter(
-      (entry, idx, arr) => arr.findIndex((candidate) => candidate.championId === entry.championId) === idx
-    )
-    .slice(0, 16);
+    .slice(0, 120)
+    .map((entry) => ({
+      championId: entry.championId,
+      role: entry.role,
+      games: entry.games,
+      winRate: entry.winRate
+    }));
 
   return (
     <div className="grid gap-6">
-      <header className="grid gap-2">
+      <header className="grid gap-3">
+        <div className="flex flex-wrap items-center gap-2">
+          <Badge className="border-primary/40 bg-primary/10 text-primary">
+            Matchup Tool
+          </Badge>
+          <Badge>{popular.length} role pages</Badge>
+        </div>
         <h1 className="font-[var(--font-sora)] text-3xl font-semibold tracking-tight">
           Matchup Analysis
         </h1>
         <p className="text-sm text-fg/75">
-          Deep dive into lane counters, win rates, and matchup trends.
+          Search champions, filter by role, and jump directly to detailed counter pages.
         </p>
       </header>
 
-      <Card className="p-5">
-        <h2 className="font-[var(--font-sora)] text-lg font-semibold">Popular Matchup Pages</h2>
-        <div className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3 lg:grid-cols-4">
-          {popular.map((entry) => {
-            const champion = champions[String(entry.championId)];
-            const championName = champion?.name ?? `Champion ${entry.championId}`;
-            return (
-              <Link
-                key={`${entry.championId}-${entry.role}`}
-                href={`/matchups/${entry.championId}?role=${encodeURIComponent(entry.role)}`}
-                className="rounded-lg border border-border/60 bg-white/[0.03] p-3 transition hover:bg-white/[0.08]"
-              >
-                <div className="flex items-center gap-2.5">
-                  <Image
-                    src={championIconUrl(version, champion?.id ?? "Unknown")}
-                    alt={championName}
-                    width={34}
-                    height={34}
-                    className="rounded-md"
-                  />
-                  <div className="min-w-0">
-                    <p className="truncate text-sm font-medium text-fg">{championName}</p>
-                    <p className="truncate text-xs text-muted">{roleDisplayLabel(entry.role)}</p>
-                  </div>
-                </div>
-              </Link>
-            );
-          })}
-        </div>
+      <Card className="p-4 md:p-5">
+        <MatchupsExplorerClient entries={popular} champions={champions} version={version} />
       </Card>
     </div>
   );

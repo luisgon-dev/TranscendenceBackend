@@ -40,6 +40,8 @@ Transcendence is a backend + web monorepo:
   - `/champions/*`
   - `/matchups/*`
   - `/pro-builds/*` (currently includes intentional preview stubs where backend data is pending)
+  - `/summoners/[region]/[riotId]` is the unified profile + match history surface
+    - Legacy `/summoners/[region]/[riotId]/matches*` routes redirect into this unified view using query state (`page`, `queue`, `expandMatchId`)
 
 ### `packages/api-client`
 - Generated OpenAPI TypeScript client artifacts

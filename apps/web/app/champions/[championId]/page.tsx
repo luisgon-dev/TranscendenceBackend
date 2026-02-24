@@ -207,11 +207,22 @@ export default async function ChampionDetailPage({
   const favorableMatchups = matchups?.favorableMatchups ?? [];
   const heroEntry = pickBestEntry(winrates, effectiveRole);
   const heroTier = deriveTier(heroEntry?.winRate);
+  const splashUrl = `https://ddragon.leagueoflegends.com/cdn/img/champion/splash/${champSlug}_0.jpg`;
 
   return (
     <div className="grid gap-6">
       {/* ── Champion Header ── */}
-      <header className="flex flex-col gap-4">
+      <header className="glass-card mesh-highlight relative overflow-hidden rounded-[2rem] p-5 md:p-6">
+        <div
+          className="pointer-events-none absolute inset-0 opacity-30"
+          style={{
+            backgroundImage: `linear-gradient(to right, hsl(var(--bg)) 20%, hsl(var(--bg) / 0.82) 45%, transparent 100%), url(${splashUrl})`,
+            backgroundSize: "cover",
+            backgroundPosition: "top right"
+          }}
+        />
+
+        <div className="relative flex flex-col gap-4">
         <div className="flex items-center gap-4">
           <Image
             src={championIconUrl(version, champSlug)}
@@ -273,6 +284,7 @@ export default async function ChampionDetailPage({
           baseHref={`/champions/${championId}`}
           patch={winrates?.patch ?? builds?.patch}
         />
+        </div>
       </header>
 
       {/* ── Win Rates Table ── */}
