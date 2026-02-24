@@ -3,6 +3,7 @@ using Microsoft.Extensions.Caching.Hybrid;
 using Transcendence.Data;
 using Transcendence.Service.Core.Services.Analysis.Interfaces;
 using Transcendence.Service.Core.Services.Analysis.Models;
+using Transcendence.Service.Core.Services.RiotApi;
 using Transcendence.Service.Core.Services.RiotApi.DTOs;
 using RuneSelectionTree = Transcendence.Data.Models.LoL.Match.RuneSelectionTree;
 
@@ -60,6 +61,9 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         var baseQuery = db.MatchParticipants
             .AsNoTracking()
             .Where(mp => mp.SummonerId == summonerId)
+            .Where(mp => mp.Match.QueueId == QueueCatalog.RankedSoloDuoQueueId ||
+                         (mp.Match.QueueId == 0 &&
+                          mp.Match.QueueType == QueueCatalog.RankedSoloDuoQueueId.ToString()))
             .Select(mp => new
             {
                 mp.Win,
@@ -97,7 +101,11 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         var recent = await db.MatchParticipants
             .AsNoTracking()
             .Where(mp => mp.SummonerId == summonerId)
+            .Where(mp => mp.Match.QueueId == QueueCatalog.RankedSoloDuoQueueId ||
+                         (mp.Match.QueueId == 0 &&
+                          mp.Match.QueueType == QueueCatalog.RankedSoloDuoQueueId.ToString()))
             .OrderByDescending(mp => mp.Match.MatchDate)
+            .ThenByDescending(mp => mp.Match.MatchId)
             .Select(mp => new RecentPerformancePoint(
                 mp.Match.MatchId!,
                 mp.Win,
@@ -158,6 +166,9 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         var games = await db.MatchParticipants
             .AsNoTracking()
             .Where(mp => mp.SummonerId == summonerId)
+            .Where(mp => mp.Match.QueueId == QueueCatalog.RankedSoloDuoQueueId ||
+                         (mp.Match.QueueId == 0 &&
+                          mp.Match.QueueType == QueueCatalog.RankedSoloDuoQueueId.ToString()))
             .Select(mp => new
             {
                 mp.ChampionId,
@@ -226,6 +237,9 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         var rows = await db.MatchParticipants
             .AsNoTracking()
             .Where(mp => mp.SummonerId == summonerId)
+            .Where(mp => mp.Match.QueueId == QueueCatalog.RankedSoloDuoQueueId ||
+                         (mp.Match.QueueId == 0 &&
+                          mp.Match.QueueType == QueueCatalog.RankedSoloDuoQueueId.ToString()))
             .Select(mp => new { mp.TeamPosition, mp.Win })
             .ToListAsync(ct);
 
@@ -257,17 +271,34 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         return list;
     }
 
-    public async Task<PagedResult<RecentMatchSummary>> GetRecentMatchesAsync(Guid summonerId, int page, int pageSize,
+    public async Task<PagedResult<RecentMatchSummary>> GetRecentMatchesAsync(
+        Guid summonerId,
+        int page,
+        int pageSize,
+        string? queueFamily,
+        IReadOnlyCollection<int>? queueIds,
         CancellationToken ct)
     {
         if (page <= 0) page = 1;
         if (pageSize <= 0 || pageSize > 100) pageSize = 20;
         try
         {
-            var cacheKey = $"{RecentMatchesCacheKeyPrefix}{summonerId}:{page}:{pageSize}";
+            var normalizedFamily = NormalizeQueueFamily(queueFamily);
+            var normalizedQueueIds = NormalizeQueueIds(queueIds);
+            var queueIdsCacheKey = normalizedQueueIds.Count > 0
+                ? string.Join(",", normalizedQueueIds)
+                : "-";
+            var cacheKey =
+                $"{RecentMatchesCacheKeyPrefix}{summonerId}:{page}:{pageSize}:{normalizedFamily}:{queueIdsCacheKey}";
             return await cache.GetOrCreateAsync(
                 cacheKey,
-                async cancel => await ComputeRecentMatchesAsync(summonerId, page, pageSize, cancel),
+                async cancel => await ComputeRecentMatchesAsync(
+                    summonerId,
+                    page,
+                    pageSize,
+                    normalizedFamily,
+                    normalizedQueueIds,
+                    cancel),
                 StatsCacheOptions,
                 cancellationToken: ct);
         }
@@ -282,13 +313,23 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         }
     }
 
-    private async Task<PagedResult<RecentMatchSummary>> ComputeRecentMatchesAsync(Guid summonerId, int page,
-        int pageSize, CancellationToken ct)
+    private async Task<PagedResult<RecentMatchSummary>> ComputeRecentMatchesAsync(
+        Guid summonerId,
+        int page,
+        int pageSize,
+        string queueFamily,
+        IReadOnlyList<int> queueIds,
+        CancellationToken ct)
     {
-        var query = db.MatchParticipants
+        var query = ApplyRecentMatchFilters(
+                db.MatchParticipants
+                    .AsNoTracking()
+                    .Where(mp => mp.SummonerId == summonerId),
+                queueFamily,
+                queueIds)
             .AsNoTracking()
-            .Where(mp => mp.SummonerId == summonerId)
-            .OrderByDescending(mp => mp.Match.MatchDate);
+            .OrderByDescending(mp => mp.Match.MatchDate)
+            .ThenByDescending(mp => mp.Match.MatchId);
 
         var total = await query.CountAsync(ct);
 
@@ -302,6 +343,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 mp.Match.MatchId,
                 mp.Match.MatchDate,
                 mp.Match.Duration,
+                mp.Match.QueueId,
                 mp.Match.QueueType,
                 mp.Match.Patch,
                 mp.Win,
@@ -423,7 +465,8 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 p.MatchId ?? string.Empty,
                 p.MatchDate,
                 p.Duration,
-                p.QueueType ?? "UNKNOWN",
+                p.QueueId,
+                !string.IsNullOrWhiteSpace(p.QueueType) ? p.QueueType : QueueCatalog.ResolveQueueLabel(p.QueueId),
                 p.Win,
                 p.ChampionId,
                 p.TeamPosition,
@@ -512,7 +555,10 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
             match.MatchId ?? string.Empty,
             match.MatchDate,
             match.Duration,
-            match.QueueType ?? "UNKNOWN",
+            match.QueueId,
+            !string.IsNullOrWhiteSpace(match.QueueType)
+                ? match.QueueType
+                : QueueCatalog.ResolveQueueLabel(match.QueueId),
             string.IsNullOrWhiteSpace(match.Patch) ? null : match.Patch,
             participants
         );
@@ -680,6 +726,49 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
             return "UNKNOWN";
 
         return teamPosition.Trim().ToUpperInvariant();
+    }
+
+    private static string NormalizeQueueFamily(string? queueFamily)
+    {
+        if (string.IsNullOrWhiteSpace(queueFamily))
+            return QueueCatalog.QueueFamilyAll;
+
+        var normalized = queueFamily.Trim().ToUpperInvariant();
+        var validFamilies = QueueCatalog.GetKnownQueueFamilies().ToHashSet(StringComparer.Ordinal);
+
+        return validFamilies.Contains(normalized) ? normalized : QueueCatalog.QueueFamilyAll;
+    }
+
+    private static IReadOnlyList<int> NormalizeQueueIds(IReadOnlyCollection<int>? queueIds)
+    {
+        if (queueIds == null || queueIds.Count == 0)
+            return [];
+
+        return queueIds
+            .Where(id => id > 0)
+            .Distinct()
+            .OrderBy(id => id)
+            .ToList();
+    }
+
+    private static IQueryable<Data.Models.LoL.Match.MatchParticipant> ApplyRecentMatchFilters(
+        IQueryable<Data.Models.LoL.Match.MatchParticipant> query,
+        string queueFamily,
+        IReadOnlyList<int> queueIds)
+    {
+        if (queueIds.Count > 0)
+        {
+            var queueIdSet = queueIds.ToHashSet();
+            var queueTypeSet = queueIds.Select(id => id.ToString()).ToHashSet(StringComparer.Ordinal);
+            query = query.Where(mp =>
+                queueIdSet.Contains(mp.Match.QueueId) ||
+                (mp.Match.QueueId == 0 && mp.Match.QueueType != null && queueTypeSet.Contains(mp.Match.QueueType)));
+        }
+
+        if (!string.Equals(queueFamily, QueueCatalog.QueueFamilyAll, StringComparison.Ordinal))
+            query = query.Where(mp => mp.Match.QueueFamily == queueFamily);
+
+        return query;
     }
 
     private static SummonerOverviewStats EmptyOverview(Guid summonerId)

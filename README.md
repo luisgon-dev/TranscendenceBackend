@@ -43,14 +43,16 @@ This project is meant to demonstrate practical backend and full-stack engineerin
 - Tier list page with role and rank tier filters
 - Champion index and champion detail pages
 - Matchup analysis pages (`/matchups`, `/matchups/[championId]`)
-- Pro builds preview pages (`/pro-builds`, `/pro-builds/[championId]`)
+- Pro builds pages (`/pro-builds`, `/pro-builds/[championId]`) backed by tracked pro/high-ELO roster data
 - Champion detail includes:
   - win rates by role/tier
+  - ban rate
+  - role rank + role population metadata
   - top builds
-  - matchup tables
+  - matchup tables (`counters`, `favorable`, and full matchup universe)
   - full rune setups (primary, secondary, stat shards)
 - Unified summoner profile + match history view with refresh workflow
-- Paged match history with inline expandable match details
+- Paged match history with inline expandable match details and queue-aware filtering support
 - Legacy `/summoners/*/matches` routes redirect to the unified summoner page state
 - Account pages for registration, login, and favorites
 
@@ -60,6 +62,11 @@ This project is meant to demonstrate practical backend and full-stack engineerin
 - Hangfire-backed background processing with queue prioritization
 - Riot data ingestion and patch-aware static data updates
 - Continuous analytics ingestion and adaptive refresh jobs
+- Ranked-first + all-mode match ingestion orchestration with non-ranked backfill windows
+- Cursor-based non-ranked backfill progression per summoner for monotonic historical ingestion
+- Timeline-derived ranked @15 snapshots and retryable timeline fetch-state tracking
+- Pro roster management endpoints for manual curation of pro/high-ELO tracked summoners
+- Match queue metadata + match bans persisted for richer filtering and ban-rate analytics
 - Rune selection hierarchy persisted per match participant:
   - tree (`Primary`, `Secondary`, `StatShards`)
   - slot index within each tree
