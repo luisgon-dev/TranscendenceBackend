@@ -652,36 +652,6 @@ public class SummonerRefreshJob(
 
     private async Task InvalidateStatsCacheAsync(Guid summonerId, CancellationToken ct)
     {
-        foreach (var count in new[] { 10, 20, 50 })
-        {
-            await cache.RemoveAsync($"stats:overview:{summonerId}:{count}", ct);
-        }
-
-        foreach (var top in new[] { 5, 10 })
-        {
-            await cache.RemoveAsync($"stats:champions:{summonerId}:{top}", ct);
-        }
-
-        await cache.RemoveAsync($"stats:roles:{summonerId}", ct);
-
-        var queueFamilies = QueueCatalog.GetKnownQueueFamilies();
-
-        foreach (var page in new[] { 1, 2, 3 })
-        {
-            foreach (var pageSize in new[] { 10, 20 })
-            {
-                foreach (var queueFamily in queueFamilies)
-                {
-                    await cache.RemoveAsync($"stats:recent:{summonerId}:{page}:{pageSize}:{queueFamily}:-", ct);
-                }
-
-                foreach (var queueIds in new[] { "420", "440", "450", "420,440" })
-                {
-                    await cache.RemoveAsync(
-                        $"stats:recent:{summonerId}:{page}:{pageSize}:{QueueCatalog.QueueFamilyAll}:{queueIds}",
-                        ct);
-                }
-            }
-        }
+        await cache.RemoveByTagAsync($"summoner-stats:{summonerId}", ct);
     }
 }

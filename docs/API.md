@@ -21,6 +21,12 @@ The Next.js web frontend uses route handlers as a BFF:
 - Tokens live in HttpOnly cookies on the web domain (never exposed to browser JS)
 - AppOnly calls attach `X-API-Key` server-side from `TRN_BACKEND_API_KEY`
 
+## Rate Limiting
+
+Read-heavy endpoints are protected by server-side fixed-window rate limiting and may return:
+
+- `429 Too Many Requests`
+
 ## Key Endpoint Areas (Current)
 
 This is a navigational summary; the OpenAPI spec is the source of truth.
@@ -43,6 +49,8 @@ Default stats scope:
 - `page` / `pageSize`
 - `queueFamily` (optional; e.g. `ALL`, `RANKED_SOLO_DUO`, `RANKED_FLEX`, `NORMAL_SR`, `ARAM`, `CLASH`, `ARENA`, `ROTATING`, `BOT`, `CUSTOM`, `OTHER`)
 - `queueIds` (optional repeated query param for explicit queue IDs)
+
+When `Api:ReturnProblemDetailsOnStatsFailure=true`, stats endpoints return `500` ProblemDetails on backend errors instead of empty fallback payloads.
 
 #### Rune Payloads
 
@@ -75,6 +83,8 @@ Default stats scope:
 `GET /api/analytics/champions/{championId}/builds` includes full rune setup per build:
 - `primaryStyleId`, `subStyleId`
 - `primaryRunes` (4), `subRunes` (2), `statShards` (3)
+- Build item lists include only completed, build-impact items (no components, trinkets, wards, or consumables).
+- If patch item metadata is temporarily incomplete, the service uses a legacy exclusion fallback so builds still render while metadata refresh catches up.
 
 Additional analytics fields:
 - Tier list and champion winrate surfaces now include `banRate` (ranked solo queue denominator).
@@ -98,6 +108,11 @@ Response includes:
 ### Live Game (`AppOnly`)
 
 - `GET /api/summoners/{region}/{gameName}/{tagLine}/live-game`
+
+### Operational Health
+
+- `GET /health/live`
+- `GET /health/ready`
 
 ### Auth and Keys
 

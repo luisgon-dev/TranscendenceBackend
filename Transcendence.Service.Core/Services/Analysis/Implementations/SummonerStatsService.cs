@@ -18,6 +18,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
     private const string RolesCacheKeyPrefix = "stats:roles:";
     private const string RecentMatchesCacheKeyPrefix = "stats:recent:";
     private const string MatchDetailCacheKeyPrefix = "match:detail:";
+    private const string SummonerStatsCacheTagPrefix = "summoner-stats:";
 
     // Stats cache options: 5min total, 2min L1 (stats change on refresh)
     private static readonly HybridCacheEntryOptions StatsCacheOptions = new()
@@ -44,6 +45,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 cacheKey,
                 async cancel => await ComputeOverviewAsync(summonerId, recentGamesCount, cancel),
                 StatsCacheOptions,
+                tags: new[] { BuildSummonerStatsTag(summonerId) },
                 cancellationToken: ct);
         }
         catch (Exception ex)
@@ -149,6 +151,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 cacheKey,
                 async cancel => await ComputeChampionStatsAsync(summonerId, top, cancel),
                 StatsCacheOptions,
+                tags: new[] { BuildSummonerStatsTag(summonerId) },
                 cancellationToken: ct);
         }
         catch (Exception ex)
@@ -195,7 +198,9 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 g.Average(x => (double)x.Deaths),
                 g.Average(x => (double)x.Assists),
                 0, // fill KDA after
-                g.Average(x => x.MatchDuration > 0 ? x.Cs / (x.MatchDuration / 60.0) : 0.0),
+                g.Average(x => x.MatchDuration > 0
+                    ? x.Cs / (x.MatchDuration / 60.0)
+                    : 0.0),
                 g.Average(x => (double)x.VisionScore),
                 g.Average(x => (double)x.TotalDamageDealtToChampions)
             ))
@@ -221,6 +226,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                 cacheKey,
                 async cancel => await ComputeRoleBreakdownAsync(summonerId, cancel),
                 StatsCacheOptions,
+                tags: new[] { BuildSummonerStatsTag(summonerId) },
                 cancellationToken: ct);
         }
         catch (Exception ex)
@@ -300,6 +306,7 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
                     normalizedQueueIds,
                     cancel),
                 StatsCacheOptions,
+                tags: new[] { BuildSummonerStatsTag(summonerId) },
                 cancellationToken: ct);
         }
         catch (Exception ex)
@@ -371,7 +378,11 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
             .AsNoTracking()
             .Where(i => participantIds.Contains(i.MatchParticipantId))
             .GroupBy(i => i.MatchParticipantId)
-            .Select(g => new { ParticipantId = g.Key, Items = g.Select(i => i.ItemId).ToList() })
+            .Select(g => new
+            {
+                ParticipantId = g.Key,
+                Items = g.OrderBy(i => i.SlotIndex).Select(i => i.ItemId).ToList()
+            })
             .ToDictionaryAsync(x => x.ParticipantId, x => x.Items, ct);
 
         // Get runes with explicit selection hierarchy (plus metadata fallback fields)
@@ -568,7 +579,10 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
         Data.Models.LoL.Match.MatchParticipant p,
         Dictionary<int, RuneMetadata> runeMetadata)
     {
-        var items = p.Items.Select(i => i.ItemId).ToList();
+        var items = p.Items
+            .OrderBy(i => i.SlotIndex)
+            .Select(i => i.ItemId)
+            .ToList();
 
         // Build runes structure from explicit selection data with metadata fallback for legacy rows.
         var runes = BuildRunesDto(
@@ -719,6 +733,8 @@ public class SummonerStatsService(TranscendenceContext db, HybridCache cache, IL
     {
         return string.IsNullOrWhiteSpace(patchVersion) ? string.Empty : patchVersion.Trim();
     }
+
+    private static string BuildSummonerStatsTag(Guid summonerId) => $"{SummonerStatsCacheTagPrefix}{summonerId}";
 
     private static string NormalizeTeamPosition(string? teamPosition)
     {

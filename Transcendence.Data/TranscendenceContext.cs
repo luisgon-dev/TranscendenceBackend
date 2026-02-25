@@ -68,7 +68,12 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
 
         // Summoner lookups by Puuid
         modelBuilder.Entity<Summoner>()
-            .HasIndex(s => s.Puuid);
+            .HasIndex(s => s.Puuid)
+            .IsUnique();
+
+        modelBuilder.Entity<Summoner>()
+            .HasIndex(s => new { s.PlatformRegion, s.GameNameNormalized, s.TagLineNormalized })
+            .IsUnique();
 
         // Global query filter to exclude unfetchable matches from normal queries
         modelBuilder.Entity<Match>()
@@ -203,6 +208,15 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
                 iv.PatchVersion
             });
 
+            entity.Property(iv => iv.BuildsFrom)
+                .HasDefaultValueSql("'{}'::integer[]");
+            entity.Property(iv => iv.BuildsInto)
+                .HasDefaultValueSql("'{}'::integer[]");
+            entity.Property(iv => iv.InStore)
+                .HasDefaultValue(true);
+            entity.Property(iv => iv.PriceTotal)
+                .HasDefaultValue(0);
+
             entity.HasOne(iv => iv.Patch)
                 .WithMany()
                 .HasForeignKey(iv => iv.PatchVersion);
@@ -291,7 +305,7 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
             entity.HasKey(mpi => new
             {
                 mpi.MatchParticipantId,
-                mpi.ItemId
+                mpi.SlotIndex
             });
 
             entity.HasOne(mpi => mpi.MatchParticipant)
@@ -305,6 +319,9 @@ public class TranscendenceContext(DbContextOptions<TranscendenceContext> options
                     mpi.ItemId,
                     mpi.PatchVersion
                 });
+
+            entity.HasIndex(mpi => new { mpi.MatchParticipantId, mpi.ItemId });
+
         });
 
         // Match participant item/rune filters align with match/participant filters
